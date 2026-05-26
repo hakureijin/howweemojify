@@ -638,32 +638,40 @@ export function CumulativeChart({ data }: Props) {
                   {p.year}
                 </text>
               )}
-              {/* Draft badge — sit on the LEFT of the medallion since the
-                  draft point is always at the chart's right edge, where there
-                  isn't room for a badge on the right. */}
-              {isDraft && (
-                <g pointerEvents="none">
-                  <rect
-                    x={p.cx - baseR - 32}
-                    y={p.cy - baseR - 10}
-                    width={32}
-                    height={12}
-                    rx={6}
-                    fill="var(--muted)"
-                  />
-                  <text
-                    x={p.cx - baseR - 16}
-                    y={p.cy - baseR - 4}
-                    textAnchor="middle"
-                    fontSize="8"
-                    fontWeight="900"
-                    fill="white"
-                    letterSpacing="0.05em"
-                  >
-                    DRAFT
-                  </text>
-                </g>
-              )}
+              {/* Draft badge — sits on the LEFT of the medallion since the draft
+                  point is always at the chart's right edge. dominantBaseline
+                  "central" centers the glyphs vertically inside the pill instead
+                  of pinning the baseline (which makes the caps poke out the top). */}
+              {isDraft && (() => {
+                const pillW = 44
+                const pillH = 14
+                const pillX = p.cx - baseR - pillW
+                const pillY = p.cy - baseR - pillH / 2 - 2
+                return (
+                  <g pointerEvents="none">
+                    <rect
+                      x={pillX}
+                      y={pillY}
+                      width={pillW}
+                      height={pillH}
+                      rx={pillH / 2}
+                      fill="var(--muted)"
+                    />
+                    <text
+                      x={pillX + pillW / 2}
+                      y={pillY + pillH / 2}
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      fontSize="8"
+                      fontWeight="900"
+                      fill="white"
+                      letterSpacing="0.05em"
+                    >
+                      DRAFT
+                    </text>
+                  </g>
+                )
+              })()}
               {/* Compare A/B annotation */}
               {compareIds.has(p.id) && diffResult && (
                 <g pointerEvents="none">
