@@ -6,7 +6,7 @@
   },
   "hero": {
     "eyebrow": "A DATA STORY",
-    "title": "How We Emojify: Trends and Patterns in Emoji Usage",
+    "title": "How We Emojify:<br></br>A Visual Narrative of Emoji",
     "subtitle": "从 📟 到 🤖 · 1999–2026",
     "scrollCue": "scroll",
     "enlarge": "放大 {char}",
@@ -316,7 +316,7 @@
     }
   },
   "footer": {
-    "heading": "来源与方法 · Sources & Methodology",
+    "heading": "References",
     "credits": "本页所有定量数据均附公开可追溯来源。"
   }
 }

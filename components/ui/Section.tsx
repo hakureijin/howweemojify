@@ -14,7 +14,7 @@ export function Section({ id, accent, children, className = '' }: Props) {
 
   if (reduced) {
     return (
-      <section id={id} className={`py-16 ${className}`} style={{ scrollMarginTop: 80 }}>
+      <section id={id} className={`py-20 md:py-28 ${className}`} style={{ scrollMarginTop: 80 }}>
         {children}
       </section>
     )
@@ -23,7 +23,7 @@ export function Section({ id, accent, children, className = '' }: Props) {
   return (
     <motion.section
       id={id}
-      className={`py-16 ${className}`}
+      className={`py-20 md:py-28 ${className}`}
       style={{ scrollMarginTop: 80, ['--section-accent' as never]: accent }}
       initial={{ opacity: 0, y: 14 }}
       whileInView={{ opacity: 1, y: 0 }}

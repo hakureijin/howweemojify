@@ -166,10 +166,10 @@ export function CategoryTreemap({ data }: Props) {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-3">
         <div>
-          <div className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[color:var(--muted)]">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[color:var(--muted)]">
             {t('eyebrow')}
           </div>
-          <div className="text-base md:text-lg font-extrabold mt-1 text-[color:var(--ink)]">
+          <div className="text-base md:text-lg font-semibold mt-1 text-[color:var(--ink)]">
             {t('title')}
           </div>
           <div className="text-[11px] text-[color:var(--muted)] mt-1 max-w-xl">
@@ -177,7 +177,7 @@ export function CategoryTreemap({ data }: Props) {
           </div>
         </div>
         <div className="flex items-baseline gap-2">
-          <div className="text-3xl md:text-4xl font-black tabular text-[color:var(--accent-01)] leading-none">
+          <div className="display-tight text-3xl md:text-4xl font-semibold tabular text-[color:var(--accent-01)] leading-none">
             {frame.total.toLocaleString(locale)}
           </div>
           <div className="text-[11px] text-[color:var(--muted)] font-bold uppercase tracking-wider">
@@ -193,7 +193,7 @@ export function CategoryTreemap({ data }: Props) {
             type="button"
             onClick={() => setPlaying(p => !p)}
             aria-label={playing ? t('pauseAria') : t('playAria')}
-            className="shrink-0 w-9 h-9 grid place-items-center rounded-full bg-[color:var(--accent-01)] text-white text-[12px] font-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-01)]/50"
+            className="shrink-0 w-9 h-9 grid place-items-center rounded-full bg-[color:var(--accent-01)] text-white text-[12px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-01)]/50"
           >
             {playing ? '❚❚' : '▶'}
           </button>
@@ -404,12 +404,12 @@ export function CategoryTreemap({ data }: Props) {
             <div className="flex items-start justify-between gap-2">
               <div>
                 <div
-                  className="text-[10px] font-extrabold tracking-wider uppercase"
+                  className="text-[10px] font-semibold tracking-wider uppercase"
                   style={{ color: `var(--cat-${activeTile.key})` }}
                 >
                   {frame.versionLabel} · {frame.year}
                 </div>
-                <div className="text-sm font-extrabold mt-0.5 text-[color:var(--ink)]">
+                <div className="text-sm font-semibold mt-0.5 text-[color:var(--ink)]">
                   {t(`groups.${activeTile.key}` as never)}
                 </div>
               </div>
@@ -428,7 +428,7 @@ export function CategoryTreemap({ data }: Props) {
                 <div className="text-[9px] uppercase tracking-wide text-[color:var(--muted)] font-bold">
                   {t('tooltipCount')}
                 </div>
-                <div className="text-base font-black tabular text-[color:var(--ink)] leading-tight">
+                <div className="text-base font-semibold tabular text-[color:var(--ink)] leading-tight">
                   {activeTile.count.toLocaleString(locale)}
                 </div>
               </div>
@@ -437,7 +437,7 @@ export function CategoryTreemap({ data }: Props) {
                   {t('tooltipPercent')}
                 </div>
                 <div
-                  className="text-base font-black tabular leading-tight"
+                  className="text-base font-semibold tabular leading-tight"
                   style={{ color: `var(--cat-${activeTile.key})` }}
                 >
                   {((activeTile.count / frame.total) * 100).toFixed(1)}%

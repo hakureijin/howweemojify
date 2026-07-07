@@ -63,13 +63,19 @@ export function OriginMap({ pins }: { pins: OriginPin[] }) {
 
   const clampZoom = useCallback((next: ZoomState): ZoomState => {
     const k = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, next.k))
-    // Always allow a generous pan margin so dragging is responsive even at k=1.
-    const maxTx = ((k - 1) * W) / 2 + W * 0.3
-    const maxTy = ((k - 1) * H) / 2 + H * 0.3
+    // Transform scales from origin then translates, so content occupies
+    // [0, k·W] × [0, k·H] before translation. Allow tx to reach -(k-1)·W
+    // so the right/bottom edges can align with the viewport, plus a 30%
+    // overshoot margin on each side for responsive dragging.
+    const margin = 0.3
+    const minTx = -(k - 1) * W - W * margin
+    const maxTx = W * margin
+    const minTy = -(k - 1) * H - H * margin
+    const maxTy = H * margin
     return {
       k,
-      x: Math.max(-maxTx, Math.min(maxTx, next.x)),
-      y: Math.max(-maxTy, Math.min(maxTy, next.y)),
+      x: Math.max(minTx, Math.min(maxTx, next.x)),
+      y: Math.max(minTy, Math.min(maxTy, next.y)),
     }
   }, [])
 
@@ -346,7 +352,7 @@ export function OriginMap({ pins }: { pins: OriginPin[] }) {
     <div className="relative mt-8" ref={containerRef}>
       <div className="flex items-end justify-between gap-4 mb-3">
         <div>
-          <div className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[color:var(--muted)]">{t('eyebrow')}</div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[color:var(--muted)]">{t('eyebrow')}</div>
           <div className="text-sm font-bold mt-0.5">{t('title')}</div>
         </div>
         <div className="hidden md:block text-right">
@@ -379,8 +385,8 @@ export function OriginMap({ pins }: { pins: OriginPin[] }) {
                 <path
                   key={i}
                   d={path(f) || ''}
-                  fill="#f4ebd9"
-                  stroke="#e7dcc4"
+                  fill="#e8e8ed"
+                  stroke="#d2d2d7"
                   strokeWidth={0.4 / zoom.k}
                 />
               ))}
@@ -460,7 +466,7 @@ export function OriginMap({ pins }: { pins: OriginPin[] }) {
             aria-label={t('reset')}
             onClick={() => setZoom(IDENTITY)}
             disabled={atIdentity}
-            className="w-7 h-7 grid place-items-center text-[11px] font-extrabold leading-none text-[color:var(--ink)] hover:bg-[color:var(--accent-02)]/10 rounded disabled:opacity-30 disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-02)]/50"
+            className="w-7 h-7 grid place-items-center text-[11px] font-semibold leading-none text-[color:var(--ink)] hover:bg-[color:var(--accent-02)]/10 rounded disabled:opacity-30 disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-02)]/50"
           >
             ⟲
           </button>
@@ -489,7 +495,7 @@ export function OriginMap({ pins }: { pins: OriginPin[] }) {
                 <div className="flex items-center gap-2">
                   <span className="text-2xl">{activePin.emoji}</span>
                   <div>
-                    <div className="text-[10px] font-extrabold uppercase tracking-wider text-[color:var(--accent-02)]">{activePin.country}</div>
+                    <div className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--accent-02)]">{activePin.country}</div>
                     <div className="text-xs font-bold tabular text-[color:var(--ink)]">{activePin.year}</div>
                   </div>
                 </div>

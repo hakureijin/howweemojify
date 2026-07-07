@@ -273,7 +273,7 @@ export function CumulativeChart({ data }: Props) {
   function DiffControls() {
     return (
       <div className="flex items-center gap-2 mt-3 flex-wrap">
-        <span className="text-[10px] font-extrabold uppercase tracking-wider text-[color:var(--muted)]">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--muted)]">
           {t('diff.eyebrow')}
         </span>
         <label className="flex items-center gap-1.5 text-[11px] font-bold text-[color:var(--muted)]">
@@ -332,13 +332,13 @@ export function CumulativeChart({ data }: Props) {
       <div className="mt-3 rounded-xl bg-white p-3.5 border border-[color:var(--accent-01)]/25">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <div className="text-[10px] font-extrabold tracking-wider text-[color:var(--accent-01)] uppercase">
+            <div className="text-[10px] font-semibold tracking-wider text-[color:var(--accent-01)] uppercase">
               {t('diff.cardEyebrow', {
                 fromYear: diffResult.fromNode.node.year,
                 toYear: diffResult.toNode.node.year,
               })}
             </div>
-            <div className="mt-0.5 text-sm font-extrabold text-[color:var(--ink)]">
+            <div className="mt-0.5 text-sm font-semibold text-[color:var(--ink)]">
               {t('diff.cardTitle', {
                 fromVersion: diffResult.fromNode.node.versionLabel,
                 toVersion: diffResult.toNode.node.versionLabel,
@@ -349,7 +349,7 @@ export function CumulativeChart({ data }: Props) {
             </div>
           </div>
           {diffResult.isDraft && (
-            <span className="text-[9px] font-extrabold tracking-wider px-1.5 py-0.5 rounded bg-[color:var(--muted)] text-white">
+            <span className="text-[9px] font-semibold tracking-wider px-1.5 py-0.5 rounded bg-[color:var(--muted)] text-white">
               {t('draftBadge')}
             </span>
           )}
@@ -363,7 +363,7 @@ export function CumulativeChart({ data }: Props) {
             <div className="text-[9px] uppercase tracking-wide text-[color:var(--muted)] font-bold">
               {t('added')}
             </div>
-            <div className="text-base font-black tabular text-[color:var(--accent-01)] leading-tight">
+            <div className="text-base font-semibold tabular text-[color:var(--accent-01)] leading-tight">
               +{diffResult.addedTotal.toLocaleString(locale)}
             </div>
           </div>
@@ -371,7 +371,7 @@ export function CumulativeChart({ data }: Props) {
             <div className="text-[9px] uppercase tracking-wide text-[color:var(--muted)] font-bold">
               {t('total')}
             </div>
-            <div className="text-base font-black tabular leading-tight">
+            <div className="text-base font-semibold tabular leading-tight">
               {diffResult.toNode.runningTotal.toLocaleString(locale)}
             </div>
           </div>
@@ -379,7 +379,7 @@ export function CumulativeChart({ data }: Props) {
             <div className="text-[9px] uppercase tracking-wide text-[color:var(--muted)] font-bold">
               {t('growth')}
             </div>
-            <div className="text-base font-black tabular text-[color:var(--accent-04)] leading-tight">
+            <div className="text-base font-semibold tabular text-[color:var(--accent-04)] leading-tight">
               {diffResult.growthPct === null
                 ? '—'
                 : `+${Math.round(diffResult.growthPct)}%`}
@@ -413,15 +413,15 @@ export function CumulativeChart({ data }: Props) {
       {/* Title row + headline total */}
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-3">
         <div>
-          <div className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[color:var(--muted)]">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[color:var(--muted)]">
             {t('eyebrow')}
           </div>
-          <div className="text-base md:text-lg font-extrabold mt-1 text-[color:var(--ink)]">
+          <div className="text-base md:text-lg font-semibold mt-1 text-[color:var(--ink)]">
             {t('title', { lastYear: fullMaxYear })}
           </div>
         </div>
         <div className="flex items-baseline gap-2">
-          <div className="text-3xl md:text-4xl font-black tabular text-[color:var(--accent-01)] leading-none">
+          <div className="display-tight text-3xl md:text-4xl font-semibold tabular text-[color:var(--accent-01)] leading-none">
             {fullFinalTotal.toLocaleString(locale)}
           </div>
           <div className="text-[11px] text-[color:var(--muted)] font-bold uppercase tracking-wider">
@@ -432,7 +432,7 @@ export function CumulativeChart({ data }: Props) {
 
       {/* Range filter buttons */}
       <div className="flex items-center gap-2 mb-2 flex-wrap">
-        <span className="text-[10px] font-extrabold uppercase tracking-wider text-[color:var(--muted)]">{t('rangeLabel')}</span>
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--muted)]">{t('rangeLabel')}</span>
         {RANGES.map(r => {
           const active = range === r.id
           return (
@@ -726,7 +726,7 @@ export function CumulativeChart({ data }: Props) {
               <div className="flex items-center gap-2">
                 <span className="text-2xl leading-none">{activePoint.highlightEmojis[0]}</span>
                 <div>
-                  <div className="text-[10px] font-extrabold tracking-wider text-[color:var(--accent-01)] uppercase">
+                  <div className="text-[10px] font-semibold tracking-wider text-[color:var(--accent-01)] uppercase">
                     {activePoint.year} · {activePoint.versionLabel}
                   </div>
                   <div className="flex gap-1.5 mt-0.5">
@@ -736,7 +736,7 @@ export function CumulativeChart({ data }: Props) {
                       </span>
                     )}
                     {activePoint.draft && (
-                      <span className="text-[9px] font-extrabold tracking-wider px-1.5 py-0.5 rounded bg-[color:var(--muted)] text-white">
+                      <span className="text-[9px] font-semibold tracking-wider px-1.5 py-0.5 rounded bg-[color:var(--muted)] text-white">
                         {t('draftBadge')}
                       </span>
                     )}
@@ -756,15 +756,15 @@ export function CumulativeChart({ data }: Props) {
             <div className="mt-3 grid grid-cols-3 gap-3 text-xs">
               <div>
                 <div className="text-[9px] uppercase tracking-wide text-[color:var(--muted)] font-bold">{t('added')}</div>
-                <div className="text-base font-black tabular text-[color:var(--accent-01)] leading-tight">+{(activePoint.newEmojiCount ?? 0).toLocaleString(locale)}</div>
+                <div className="text-base font-semibold tabular text-[color:var(--accent-01)] leading-tight">+{(activePoint.newEmojiCount ?? 0).toLocaleString(locale)}</div>
               </div>
               <div>
                 <div className="text-[9px] uppercase tracking-wide text-[color:var(--muted)] font-bold">{t('total')}</div>
-                <div className="text-base font-black tabular leading-tight">{activePoint.runningTotal.toLocaleString(locale)}</div>
+                <div className="text-base font-semibold tabular leading-tight">{activePoint.runningTotal.toLocaleString(locale)}</div>
               </div>
               <div>
                 <div className="text-[9px] uppercase tracking-wide text-[color:var(--muted)] font-bold">{t('growth')}</div>
-                <div className="text-base font-black tabular text-[color:var(--accent-04)] leading-tight">
+                <div className="text-base font-semibold tabular text-[color:var(--accent-04)] leading-tight">
                   {activePoint.previousTotal === 0
                     ? '—'
                     : `+${Math.round(activePoint.growthPct)}%`}

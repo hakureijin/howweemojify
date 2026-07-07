@@ -6,7 +6,7 @@
   },
   "hero": {
     "eyebrow": "A DATA STORY",
-    "title": "How We Emojify: Trends and Patterns in Emoji Usage",
+    "title": "How We Emojify:<br></br>A Visual Narrative of Emoji",
     "subtitle": "From 📟 to 🤖 · 1999–2026",
     "scrollCue": "scroll",
     "enlarge": "Enlarge {char}",
@@ -316,7 +316,7 @@
     }
   },
   "footer": {
-    "heading": "Sources & Methodology",
+    "heading": "References",
     "credits": "Every quantitative claim on this page carries a public, citable source."
   }
 }

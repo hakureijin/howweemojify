@@ -17,15 +17,15 @@ export function CriteriaCards({ criteria }: { criteria: Criterion[] }) {
         return (
           <article
             key={c.id}
-            className="bg-white rounded-2xl p-6 border border-[color:var(--line)] transition-colors hover:border-[color:var(--ink)]/20"
+            className="bg-white rounded-2xl p-6 card-elev transition-transform duration-200 hover:-translate-y-0.5"
           >
             <div
-              className="text-[10px] font-extrabold uppercase tracking-[0.15em]"
+              className="text-[10px] font-semibold uppercase tracking-[0.15em]"
               style={{ color: tone.color }}
             >
               {t(tone.tagKey as never)}
             </div>
-            <h3 className="text-base font-extrabold leading-tight mt-3 text-[color:var(--ink)]">
+            <h3 className="text-base font-semibold leading-tight mt-3 text-[color:var(--ink)]">
               {t(c.titleKey as never)}
             </h3>
             <p className="text-xs leading-relaxed text-[color:var(--muted)] mt-2">

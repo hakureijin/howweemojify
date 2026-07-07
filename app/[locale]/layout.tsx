@@ -6,7 +6,7 @@ import { Providers } from '@/components/Providers'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: "Let's emojify: Trends and Patterns in Emoji Usage",
+  title: 'How We Emojify: A Visual Narrative of Emoji',
 }
 
 export function generateStaticParams() {
