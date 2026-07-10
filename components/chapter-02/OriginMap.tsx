@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, useRef, useCallback } from 'react'
 import { geoEqualEarth, geoPath } from 'd3-geo'
 import { feature } from 'topojson-client'
 import { useTranslations } from 'next-intl'
+import { withBasePath } from '@/lib/base-path'
 import type { OriginPin } from '@/types/chapter-02'
 import type { FeatureCollection, Geometry } from 'geojson'
 import type { Topology, GeometryCollection } from 'topojson-specification'
@@ -39,11 +40,17 @@ export function OriginMap({ pins }: { pins: OriginPin[] }) {
   zoomRef.current = zoom
 
   useEffect(() => {
-    fetch('/world-atlas/countries-110m.json')
-      .then(r => r.json())
+    fetch(withBasePath('/world-atlas/countries-110m.json'))
+      .then(r => {
+        if (!r.ok) throw new Error(`world-atlas: HTTP ${r.status}`)
+        return r.json()
+      })
       .then((topo: Topology) => {
         const fc = feature(topo, topo.objects.countries as GeometryCollection) as unknown as FeatureCollection<Geometry>
         setFeatures(fc)
+      })
+      .catch(err => {
+        console.error('OriginMap failed to load world atlas', err)
       })
   }, [])
 
