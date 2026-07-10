@@ -582,23 +582,35 @@ git commit -m "ci(deploy): add GitHub Pages workflow"
 
 **这一步不能跳。** 把带 `basePath` 的产物放到真实的子路径下服务，是唯一能在推送前检出路径错误的办法。直接 `serve out` 会让站点挂在根路径，`basePath` 的所有假设都得不到检验。
 
-- [ ] **Step 1: 采集 dev 基准截图**
+- [ ] **Step 1: 采集 dev 基准截图——必须在 Task 3 之前做**
+
+**基准必须取自未改动的代码。** 若等到 Task 3-6 改完再启 dev server，dev 跑的已是改后的代码，比对只能证明"静态导出与改后的 dev 一致"，证明不了"与改造前一致"。Task 3-5 引入的任何视觉回归会同时出现在基准与产物中，比对照样通过，漏检。
+
+因此实际执行顺序是：**先采基准，再动代码。**
 
 ```bash
-pkill -f "next dev" || true
-rm -rf .next
-npm run dev
+# 确认 dev server 跑在未改动的代码上（git diff master -- app components lib 应为空）
+npm run dev   # 若未运行
 ```
 
-用 Playwright（`webapp-testing` skill）打开 `http://localhost:7777/zh/`，逐章截图存到 scratchpad。**重点截第二章世界地图。**
+用 Playwright（`webapp-testing` skill）打开 `http://localhost:7777/zh`，滚动全页（第二章在折叠之下，不滚不挂载），记录：
+
+- 每个 `<svg>` 的 `<path>` 数量。**世界地图应有 177 条** ——`basePath` 出错导致 fetch 404 时，这个数字会塌成 0，而页面其余部分照常。这是比肉眼比图强得多的自动判据。
+- `world-atlas` 请求的状态码、`bad_responses`、`failed_requests`、console 错误条数。
+
+已知的既存噪声（**与本次改造无关，改造后应保持不变而非消失**）：
+- 30 条 `<rect> attribute width/height: Expected length, "undefined"` console 错误。
+- 构建与 dev 日志中的 `ENVIRONMENT_FALLBACK: There is no timeZone configured`（next-intl 警告，`TopNav.tsx` 触发）。
 
 - [ ] **Step 2: 停止 dev server**
 
 ```bash
-pkill -f "next dev"
+pkill -f "next[ ]dev"
 ```
 
 **必须停。** 下一步的 `next build` 会覆盖 dev server 正在读的 `.next/`，并行会让 dev 返回 500——这不是端口冲突，换端口无效。
+
+注意 `pkill -f "next dev"` 会**匹配到执行它的那条命令自身**（命令行里含该字符串），把自己的 shell 一起杀掉。用 `next[ ]dev` 这样的写法避开自匹配。
 
 - [ ] **Step 3: 构建并铺成子路径结构**
 
@@ -621,10 +633,24 @@ Expected: 自动跳转到 `http://localhost:8080/howweemojify/zh/`，页面正�
 Playwright 滚动到第二章，截图。检查 console 与 network：
 
 Expected:
-- 世界地图已渲染（与 Step 1 的基准截图一致）。
+- 世界地图已渲染，**`<path>` 数量与 Step 1 基准相同（177）**。
 - Network 中 `/howweemojify/world-atlas/countries-110m.json` 返回 **200**。
 - **无任何 404**。特别确认 `_next/static/...` 全部 200——若这里 404，说明需要把 `assetPrefix` 加回 `next.config.ts`。
-- console 中无 `OriginMap failed to load world atlas`。
+- console 中无 `OriginMap failed to load world atlas`，且错误总数仍为 30（既存噪声，不多不少）。
+
+**从根路径 `/howweemojify/` 进入时，会看到若干 `net::ERR_ABORTED` 的 `_next/static/chunks/*.js` 失败请求。这是预期行为**：跳转页刚开始加载框架 chunk，内联脚本随即 `location.replace` 跳走，浏览器取消了飞行中的请求。要区分它与真实的资源故障，直接打开 `/howweemojify/zh/`（绕开跳转），此时 `failed_requests` 应为空。
+
+- [ ] **Step 5b: 验证语言协商与无 JS 回退**
+
+middleware 的两项职责都必须被替代。用 Playwright 以不同 `locale` 开 context，从根路径进入：
+
+| navigator.language | 期望落点 |
+|---|---|
+| `en-US` / `en-GB` | `/howweemojify/en/` |
+| `zh-CN` / `ja-JP` | `/howweemojify/zh/` |
+| 禁用 JS（`java_script_enabled=False`） | `/howweemojify/zh/` |
+
+无 JS 那条要断言**落点 URL**，不要去找 `<meta http-equiv="refresh">` 标签——meta refresh 由浏览器执行（不是 JS 特性），等断言时页面早已跳走，找标签必然超时。
 
 - [ ] **Step 6: 逐章比对**
 
