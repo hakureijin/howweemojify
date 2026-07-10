@@ -22,6 +22,30 @@
 
 spec 第 1 节写了 `assetPrefix: basePath || undefined`。本计划**省略 `assetPrefix`**：Next.js 中 `assetPrefix` 的默认值即 `basePath`，显式重设是冗余；若其语义为追加而非替代，将产生 `/howweemojify/howweemojify/_next/...` 这一类本不存在的故障。Task 7 的静态预览会验证资源加载；若出现 404，再加回 `assetPrefix`。
 
+**已验证（2026-07-10）**：省略是正确的。`GITHUB_PAGES=true` 构建后，`out/zh/index.html` 中资源路径为 `/howweemojify/_next/static/...`，双重前缀 `howweemojify/howweemojify` 出现 **0** 次；静态托管下抽样 chunk 返回 200。无需加回。
+
+## 执行状态（2026-07-10）
+
+**Task 1-7 完成并验证。Task 8 阻塞在一个只有 `evetai1997-beep` 能拨的开关上。**
+
+代码已合并进 `master` 并推送到 `origin` 与 `pages` 两端（`a82de00`）。CI 的 `npm ci` 与
+`Build static export` 均通过，但 `actions/configure-pages` 的 `enablement: true` 失败：
+
+```
+X Create Pages site failed. Error: Resource not accessible by integration
+```
+
+`GITHUB_TOKEN` 即便声明 `pages: write` 也无权 `POST /repos/.../pages` 创建站点；用
+`hakureijin` 凭据手动调该 API 返回 404（权限不足）。
+
+**恢复的唯一前置**：由 `evetai1997-beep` 在
+`https://github.com/evetai1997-beep/howweemojify/settings/pages`
+把 Build and deployment → Source 设为 **"GitHub Actions"**。之后 `configure-pages` 的
+`GET` 会成功、不再尝试创建，workflow 无需修改，直接 `gh run rerun` 即可。
+
+恢复前先跑 `gh api repos/evetai1997-beep/howweemojify/pages` 确认——404 说明还没开，
+别急着改 workflow。
+
 ---
 
 ## File Structure
@@ -43,6 +67,7 @@ spec 第 1 节写了 `assetPrefix: basePath || undefined`。本计划**省略 `a
 
 ## Task 1: 基础路径工具
 
+
 **Files:**
 - Create: `lib/base-path.ts`
 - Test: `tests/lib/base-path.test.ts`
@@ -51,7 +76,7 @@ spec 第 1 节写了 `assetPrefix: basePath || undefined`。本计划**省略 `a
 - Consumes: 无
 - Produces: `PAGES_BASE_PATH: string`、`resolveBasePath(githubPages: string | undefined): string`、`withBasePath(path: string): string`
 
-- [ ] **Step 1: 写失败的测试**
+- [x] **Step 1: 写失败的测试**
 
 创建 `tests/lib/base-path.test.ts`：
 
@@ -95,12 +120,12 @@ describe('withBasePath', () => {
 })
 ```
 
-- [ ] **Step 2: 运行测试，确认失败**
+- [x] **Step 2: 运行测试，确认失败**
 
 Run: `npx vitest run tests/lib/base-path.test.ts`
 Expected: FAIL — `Failed to resolve import "@/lib/base-path"`
 
-- [ ] **Step 3: 写最小实现**
+- [x] **Step 3: 写最小实现**
 
 创建 `lib/base-path.ts`：
 
@@ -124,12 +149,12 @@ export function withBasePath(path: string): string {
 }
 ```
 
-- [ ] **Step 4: 运行测试，确认通过**
+- [x] **Step 4: 运行测试，确认通过**
 
 Run: `npx vitest run tests/lib/base-path.test.ts`
 Expected: PASS，5 个用例全绿
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add lib/base-path.ts tests/lib/base-path.test.ts
@@ -139,6 +164,7 @@ git commit -m "feat(deploy): add base path helpers for GitHub Pages subpath"
 ---
 
 ## Task 2: 根路径跳转逻辑
+
 
 **Files:**
 - Create: `lib/locale-redirect.ts`
@@ -150,7 +176,7 @@ git commit -m "feat(deploy): add base path helpers for GitHub Pages subpath"
 
 `redirectScript` 返回一个 IIFE 字符串，形如 `(function(n,l){...})(navigator,location);`。之所以把 `navigator`/`location` 作为参数传入而非直接引用全局，是为了让测试能用 `new Function('navigator','location', script)` 注入替身，从而**真正执行**这段脚本来验证跳转目标，而不是对字符串做正则断言。
 
-- [ ] **Step 1: 写失败的测试**
+- [x] **Step 1: 写失败的测试**
 
 创建 `tests/lib/locale-redirect.test.ts`：
 
@@ -201,12 +227,12 @@ describe('redirectScript', () => {
 })
 ```
 
-- [ ] **Step 2: 运行测试，确认失败**
+- [x] **Step 2: 运行测试，确认失败**
 
 Run: `npx vitest run tests/lib/locale-redirect.test.ts`
 Expected: FAIL — `Failed to resolve import "@/lib/locale-redirect"`
 
-- [ ] **Step 3: 写最小实现**
+- [x] **Step 3: 写最小实现**
 
 创建 `lib/locale-redirect.ts`：
 
@@ -228,12 +254,12 @@ export function redirectScript(base: string): string {
 }
 ```
 
-- [ ] **Step 4: 运行测试，确认通过**
+- [x] **Step 4: 运行测试，确认通过**
 
 Run: `npx vitest run tests/lib/locale-redirect.test.ts`
 Expected: PASS，6 个用例全绿
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add lib/locale-redirect.ts tests/lib/locale-redirect.test.ts
@@ -243,6 +269,7 @@ git commit -m "feat(deploy): add client-side locale redirect for static export"
 ---
 
 ## Task 3: 切换 Next 到静态导出
+
 
 **Files:**
 - Modify: `next.config.ts`
@@ -255,13 +282,13 @@ git commit -m "feat(deploy): add client-side locale redirect for static export"
 
 `middleware.ts` 必须与本 task 一起删除：`output: 'export'` 与 middleware 共存时 Next 构建直接失败，两者分开提交会留下一个构建不过的中间提交。
 
-- [ ] **Step 1: 删除 middleware**
+- [x] **Step 1: 删除 middleware**
 
 ```bash
 git rm middleware.ts
 ```
 
-- [ ] **Step 2: 改写 `next.config.ts`**
+- [x] **Step 2: 改写 `next.config.ts`**
 
 ```ts
 import type { NextConfig } from 'next'
@@ -284,7 +311,7 @@ const nextConfig: NextConfig = {
 export default withNextIntl(nextConfig)
 ```
 
-- [ ] **Step 3: 改 `package.json` 的 start 脚本**
+- [x] **Step 3: 改 `package.json` 的 start 脚本**
 
 `output: 'export'` 之后 `next start` 不再适用（Next 会报错，它已不是服务器渲染）。把
 
@@ -300,7 +327,7 @@ export default withNextIntl(nextConfig)
 
 不新增依赖。
 
-- [ ] **Step 4: 确认 dev server 未在运行，然后构建**
+- [x] **Step 4: 确认 dev server 未在运行，然后构建**
 
 `next build` 与 `next dev` 共用 `.next/`，必须先确认没有 dev server 在跑：
 
@@ -314,7 +341,7 @@ Expected: 构建成功，且 `out/` 生成。若报 `Middleware cannot be used w
 
 若报错指向 `next.config.ts` 无法 import `./lib/base-path`，则把 `resolveBasePath` 的逻辑内联进 `next.config.ts`（`const basePath = process.env.GITHUB_PAGES === 'true' ? '/howweemojify' : ''`），并在 `lib/base-path.ts` 顶部加注释说明该值需与 config 手工同步。
 
-- [ ] **Step 5: 确认导出产物结构**
+- [x] **Step 5: 确认导出产物结构**
 
 ```bash
 ls out/ && ls out/zh/ | head -3
@@ -322,7 +349,7 @@ ls out/ && ls out/zh/ | head -3
 
 Expected: `out/` 下有 `zh/`、`en/`、`404.html`、`_next/`；`out/zh/index.html` 存在（`trailingSlash: true` 的效果）。此时 `out/index.html` **尚不存在**——由 Task 4 提供。
 
-- [ ] **Step 6: 提交**
+- [x] **Step 6: 提交**
 
 ```bash
 git add next.config.ts package.json
@@ -332,6 +359,7 @@ git commit -m "feat(deploy): switch to static export, drop middleware"
 ---
 
 ## Task 4: 根跳转页
+
 
 **Files:**
 - Create: `app/page.tsx`
@@ -344,7 +372,7 @@ git commit -m "feat(deploy): switch to static export, drop middleware"
 
 本页是**服务端组件，在构建期渲染**，因此直接读真实环境变量 `GITHUB_PAGES` 并调 `resolveBasePath()`，而**不**读 `process.env.NEXT_PUBLIC_BASE_PATH`。后者依赖 `next.config.ts` 的 `env:` 注入，多一层机制就多一个失效点。`NEXT_PUBLIC_BASE_PATH` 的注入只有客户端组件（`OriginMap`，Task 5）才真正需要。
 
-- [ ] **Step 1: 创建 `app/page.tsx`**
+- [x] **Step 1: 创建 `app/page.tsx`**
 
 ```tsx
 import { resolveBasePath } from '@/lib/base-path'
@@ -367,7 +395,7 @@ export default function RootRedirect() {
 
 `<meta http-equiv="refresh">` 是无 JS 时的回退，目标为默认语言。有 JS 时内联脚本先执行并 `location.replace`，不会留下多余的历史记录。
 
-- [ ] **Step 2: 构建并确认根页面存在**
+- [x] **Step 2: 构建并确认根页面存在**
 
 ```bash
 rm -rf .next out && npm run build && ls out/index.html
@@ -375,7 +403,7 @@ rm -rf .next out && npm run build && ls out/index.html
 
 Expected: `out/index.html` 存在。
 
-- [ ] **Step 3: 确认根页面内容正确（空前缀）**
+- [x] **Step 3: 确认根页面内容正确（空前缀）**
 
 注意：生成的脚本里 `location` 只是 IIFE 的实参名，函数体内用的是形参 `l`，所以文本中出现的是 `l.replace(...)`，grep `location.replace` 永远匹配不到。
 
@@ -386,7 +414,7 @@ grep -c 'navigator,location' out/index.html
 
 Expected: 第一条输出 `url=/zh/`（base 为空串）；第二条输出 `1`，说明内联脚本已注入。
 
-- [ ] **Step 4: 确认带前缀构建时跳转目标正确**
+- [x] **Step 4: 确认带前缀构建时跳转目标正确**
 
 ```bash
 rm -rf .next out && GITHUB_PAGES=true npm run build && grep -o 'url=[^"]*' out/index.html
@@ -394,7 +422,7 @@ rm -rf .next out && GITHUB_PAGES=true npm run build && grep -o 'url=[^"]*' out/i
 
 Expected: `url=/howweemojify/zh/`
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add app/page.tsx
@@ -405,6 +433,7 @@ git commit -m "feat(deploy): add static root page with client-side locale redire
 
 ## Task 5: 修正 OriginMap 的资源路径
 
+
 **Files:**
 - Modify: `components/chapter-02/OriginMap.tsx:41-48`
 
@@ -414,7 +443,7 @@ git commit -m "feat(deploy): add static root page with client-side locale redire
 
 这是全代码库**唯一**受 `basePath` 影响的运行时路径。`data/*.json` 全部走 ES 静态 import，不发 HTTP，不受影响。不改此处，第二章世界地图在 Pages 上 404 且**静默失败**（无 `.catch()`，`features` 保持 `null`，地图渲染为空白）。
 
-- [ ] **Step 1: 在 import 区加入 helper**
+- [x] **Step 1: 在 import 区加入 helper**
 
 在 `components/chapter-02/OriginMap.tsx` 的 import 区加：
 
@@ -422,7 +451,7 @@ git commit -m "feat(deploy): add static root page with client-side locale redire
 import { withBasePath } from '@/lib/base-path'
 ```
 
-- [ ] **Step 2: 改写 fetch**
+- [x] **Step 2: 改写 fetch**
 
 把第 41-48 行的
 
@@ -458,7 +487,7 @@ import { withBasePath } from '@/lib/base-path'
 
 新增的 `r.ok` 检查与 `.catch()` 不改变正常路径下的视觉表现，只是让路径配错时在 console 里留下证据，而不是无声地少一张地图。
 
-- [ ] **Step 3: 类型检查与 lint**
+- [x] **Step 3: 类型检查与 lint**
 
 ```bash
 npx tsc --noEmit && npm run lint
@@ -466,7 +495,7 @@ npx tsc --noEmit && npm run lint
 
 Expected: 均无错误。
 
-- [ ] **Step 4: 全量测试**
+- [x] **Step 4: 全量测试**
 
 ```bash
 npm test
@@ -474,7 +503,7 @@ npm test
 
 Expected: 全部通过（含 Task 1、2 新增用例）。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add components/chapter-02/OriginMap.tsx
@@ -485,6 +514,7 @@ git commit -m "fix(chapter-02): resolve world atlas URL through basePath"
 
 ## Task 6: GitHub Actions 部署流水线
 
+
 **Files:**
 - Create: `.github/workflows/deploy.yml`
 
@@ -494,7 +524,7 @@ git commit -m "fix(chapter-02): resolve world atlas URL through basePath"
 
 触发器同时列出 `master` 与 `main`：目标仓库 `default_branch` 为 `main` 而我们推送 `master`。`push` 触发器只匹配分支名，与默认分支无关，两个都列可避免默认分支归属带来的意外。
 
-- [ ] **Step 1: 创建 workflow**
+- [x] **Step 1: 创建 workflow**
 
 ```yaml
 name: Deploy to GitHub Pages
@@ -555,7 +585,7 @@ jobs:
 
 **不需要 `.nojekyll`**：官方 Actions 部署路径直接服务 artifact，不经过 Jekyll，`_next/` 不会被忽略。
 
-- [ ] **Step 2: 校验 YAML 语法**
+- [x] **Step 2: 校验 YAML 语法**
 
 ```bash
 python3 -c "import yaml,sys; yaml.safe_load(open('.github/workflows/deploy.yml')); print('yaml ok')"
@@ -563,7 +593,7 @@ python3 -c "import yaml,sys; yaml.safe_load(open('.github/workflows/deploy.yml')
 
 Expected: `yaml ok`
 
-- [ ] **Step 3: 提交**
+- [x] **Step 3: 提交**
 
 ```bash
 git add .github/workflows/deploy.yml
@@ -574,6 +604,7 @@ git commit -m "ci(deploy): add GitHub Pages workflow"
 
 ## Task 7: 本地复现 Pages 子路径并验证
 
+
 **Files:** 无改动。这是纯验证 task。
 
 **Interfaces:**
@@ -582,7 +613,7 @@ git commit -m "ci(deploy): add GitHub Pages workflow"
 
 **这一步不能跳。** 把带 `basePath` 的产物放到真实的子路径下服务，是唯一能在推送前检出路径错误的办法。直接 `serve out` 会让站点挂在根路径，`basePath` 的所有假设都得不到检验。
 
-- [ ] **Step 1: 采集 dev 基准截图——必须在 Task 3 之前做**
+- [x] **Step 1: 采集 dev 基准截图——必须在 Task 3 之前做**
 
 **基准必须取自未改动的代码。** 若等到 Task 3-6 改完再启 dev server，dev 跑的已是改后的代码，比对只能证明"静态导出与改后的 dev 一致"，证明不了"与改造前一致"。Task 3-5 引入的任何视觉回归会同时出现在基准与产物中，比对照样通过，漏检。
 
@@ -602,7 +633,7 @@ npm run dev   # 若未运行
 - 30 条 `<rect> attribute width/height: Expected length, "undefined"` console 错误。
 - 构建与 dev 日志中的 `ENVIRONMENT_FALLBACK: There is no timeZone configured`（next-intl 警告，`TopNav.tsx` 触发）。
 
-- [ ] **Step 2: 停止 dev server**
+- [x] **Step 2: 停止 dev server**
 
 ```bash
 pkill -f "next[ ]dev"
@@ -612,7 +643,7 @@ pkill -f "next[ ]dev"
 
 注意 `pkill -f "next dev"` 会**匹配到执行它的那条命令自身**（命令行里含该字符串），把自己的 shell 一起杀掉。用 `next[ ]dev` 这样的写法避开自匹配。
 
-- [ ] **Step 3: 构建并铺成子路径结构**
+- [x] **Step 3: 构建并铺成子路径结构**
 
 ```bash
 rm -rf .next out
@@ -622,13 +653,13 @@ cp -r out/* /tmp/site/howweemojify/
 npx --yes serve /tmp/site -l 8080
 ```
 
-- [ ] **Step 4: 验证根路径跳转**
+- [x] **Step 4: 验证根路径跳转**
 
 Playwright 打开 `http://localhost:8080/howweemojify/`
 
 Expected: 自动跳转到 `http://localhost:8080/howweemojify/zh/`，页面正常渲染。
 
-- [ ] **Step 5: 验证第二章地图与 Network**
+- [x] **Step 5: 验证第二章地图与 Network**
 
 Playwright 滚动到第二章，截图。检查 console 与 network：
 
@@ -640,7 +671,7 @@ Expected:
 
 **从根路径 `/howweemojify/` 进入时，会看到若干 `net::ERR_ABORTED` 的 `_next/static/chunks/*.js` 失败请求。这是预期行为**：跳转页刚开始加载框架 chunk，内联脚本随即 `location.replace` 跳走，浏览器取消了飞行中的请求。要区分它与真实的资源故障，直接打开 `/howweemojify/zh/`（绕开跳转），此时 `failed_requests` 应为空。
 
-- [ ] **Step 5b: 验证语言协商与无 JS 回退**
+- [x] **Step 5b: 验证语言协商与无 JS 回退**
 
 middleware 的两项职责都必须被替代。用 Playwright 以不同 `locale` 开 context，从根路径进入：
 
@@ -652,11 +683,11 @@ middleware 的两项职责都必须被替代。用 Playwright 以不同 `locale`
 
 无 JS 那条要断言**落点 URL**，不要去找 `<meta http-equiv="refresh">` 标签——meta refresh 由浏览器执行（不是 JS 特性），等断言时页面早已跳走，找标签必然超时。
 
-- [ ] **Step 6: 逐章比对**
+- [x] **Step 6: 逐章比对**
 
 把 Step 5 的截图与 Step 1 的基准逐章比对。任何差异都要定位到原因后才能继续。
 
-- [ ] **Step 7: 全量测试与 lint**
+- [x] **Step 7: 全量测试与 lint**
 
 ```bash
 pkill -f "serve /tmp/site" || true
@@ -665,7 +696,7 @@ npm test && npm run lint && npx tsc --noEmit
 
 Expected: 全绿。
 
-- [ ] **Step 8: 清理**
+- [x] **Step 8: 清理**
 
 ```bash
 rm -rf /tmp/site
@@ -677,6 +708,7 @@ rm -rf /tmp/site
 
 ## Task 8: 合并、配置 remote、发布
 
+
 **Files:** 无改动。
 
 **Interfaces:**
@@ -685,14 +717,14 @@ rm -rf /tmp/site
 
 **前置条件：Task 7 的全部 Expected 均已满足。** 未通过则不得进入本 task。
 
-- [ ] **Step 1: 合并回 master**
+- [x] **Step 1: 合并回 master**
 
 ```bash
 git checkout master
 git merge --no-ff feat/github-pages-deploy -m "feat: deploy to GitHub Pages via static export"
 ```
 
-- [ ] **Step 2: 添加 pages remote**
+- [x] **Step 2: 添加 pages remote**
 
 ```bash
 git remote add pages https://github.com/evetai1997-beep/howweemojify.git
@@ -701,7 +733,7 @@ git remote -v
 
 Expected: `origin` 指向 `hakureijin/howweemojify`，`pages` 指向 `evetai1997-beep/howweemojify`。
 
-- [ ] **Step 3: 推送**
+- [x] **Step 3: 推送**
 
 目标仓库为空，首次推送无冲突，**不需要 `--force`**。
 
@@ -710,7 +742,7 @@ git push origin master
 git push pages master
 ```
 
-- [ ] **Step 4: 观察 workflow**
+- [x] **Step 4: 观察 workflow**
 
 ```bash
 gh run list --repo evetai1997-beep/howweemojify --limit 3
@@ -742,11 +774,16 @@ git branch -d feat/github-pages-deploy
 
 ## 需要 `evetai1997-beep` 账号操作的兜底项
 
-以下三项我们**无 admin 权限**，均为兜底，不一定触发：
+以下三项我们**无 admin 权限**。首次推送后的实测结果：
 
-1. workflow 未触发 → Settings → Actions → General，允许 workflow 运行。
-2. `configure-pages` 失败 → Settings → Pages → Source 选 "GitHub Actions"。
-3. 目标仓库 `default_branch` 为 `main` 而我们推 `master`。不影响部署，仅影响仓库首页展示。想修正需 admin。
+1. ~~workflow 未触发 → Settings → Actions → General，允许 workflow 运行。~~
+   **未触发此项。** Actions 默认启用，推送后 workflow 立即开始运行。
+2. **`configure-pages` 失败 → Settings → Pages → Source 选 "GitHub Actions"。**
+   **已触发，阻塞中。** `POST /repos/.../pages` 返回 `Resource not accessible by integration`；
+   用 `hakureijin` 凭据手动调同一 API 返回 404（权限不足）。**必须由 `evetai1997-beep` 手动开启。**
+   开启后 `configure-pages` 的 `GET` 会成功、不再尝试创建，workflow 无需修改，`gh run rerun` 即可。
+3. 目标仓库 `default_branch` 为 `main` 而我们推 `master`。不影响部署（`push` 触发器按分支名匹配，
+   实测 workflow 正常触发），仅影响仓库首页展示。想修正需 admin。
 
 ## 非目标
 
