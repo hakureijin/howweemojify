@@ -1,0 +1,56 @@
+name: Deploy to GitHub Pages
+
+# master 与 main 都列出：目标仓库 default_branch 为 main，而我们推送 master。
+# push 触发器只匹配分支名，与默认分支无关。
+on:
+  push:
+    branches: [master, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build static export
+        env:
+          GITHUB_PAGES: 'true'
+        run: npm run build
+
+      # enablement: true 让 workflow 用仓库自带的 GITHUB_TOKEN 开启 Pages，
+      # 这是本方案唯一不需要 admin 权限的自举手段。
+      - name: Enable and configure Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
