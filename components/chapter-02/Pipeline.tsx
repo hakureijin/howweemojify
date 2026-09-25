@@ -18,7 +18,7 @@ export function Pipeline({ steps, isStatic = false }: { steps: PipelineStep[]; i
                 viewport: { once: true },
                 transition: { delay: i * 0.08 },
               })}
-              className="flex-1 text-center"
+              className="flex-1 min-w-0 text-center"
             >
               <div className="mx-auto w-9 h-9 rounded-full bg-[color:var(--accent-02)] text-white flex items-center justify-center font-semibold text-sm">
                 {i + 1}
