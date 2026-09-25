@@ -47,6 +47,27 @@ npm test
 
 Then open `http://localhost:7777/` — you'll be redirected to `/zh`. Use the language toggle in the top-right to flip between `/zh` and `/en`.
 
+## Static control page & user-study logging
+
+`/zh/static/` and `/en/static/` present the same information as the main page with no interaction and no motion — tooltips become labels and tables, the treemap slider becomes small multiples, the map's zoom becomes regional close-ups. The two versions do not link to each other. It is published on GitHub Pages alongside the main page.
+
+For the user study, build and serve the experiment variant (language switch hidden, behaviour logging on):
+
+```bash
+npm run experiment            # build with NEXT_PUBLIC_EXPERIMENT=1, then serve on 0.0.0.0:7777
+```
+
+Give each participant one link:
+
+- interactive: `http://<host>:7777/zh/?pid=P001`
+- static:      `http://<host>:7777/zh/static/?pid=P001`
+
+Events are appended to `logs/events-YYYY-MM-DD.jsonl` (UTC date, one JSON object per line, `logs/` is git-ignored): `session_start`, `scroll`, `section_dwell`, `visibility`, `heartbeat` (every 15 s), `link`, `session_end`, and — interactive page only — `interact` (`target`/`action`/`detail`). Every event carries `pid`, `sessionId`, `condition`, `locale`, `seq`, client time `t`, `serverTime` and `ip`; dedupe on `(sessionId, seq)`.
+
+To run on a cloud VM, copy `out/` and `scripts/experiment-server.mjs` and run `node scripts/experiment-server.mjs` (env: `PORT`, `OUT_DIR`, `LOG_DIR`). Before a session, `python3 scripts/experiment_smoke.py` checks the whole pipeline.
+
+Do not run `npm run build:experiment` while `npm run dev` is running — they share `.next/`.
+
 ## File layout
 
 ```
