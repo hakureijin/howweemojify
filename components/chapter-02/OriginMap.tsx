@@ -1,26 +1,17 @@
 'use client'
 import { useEffect, useMemo, useState, useRef, useCallback } from 'react'
-import { geoEqualEarth, geoPath } from 'd3-geo'
-import { feature } from 'topojson-client'
+import { geoPath } from 'd3-geo'
 import { useTranslations } from 'next-intl'
-import { withBasePath } from '@/lib/base-path'
+import { makeProjection, placePins, MAP_W as W, MAP_H as H, type PlacedPin } from '@/lib/charts/origin-map'
+import { useWorldFeatures } from '@/lib/use-world-features'
 import type { OriginPin } from '@/types/chapter-02'
-import type { FeatureCollection, Geometry } from 'geojson'
-import type { Topology, GeometryCollection } from 'topojson-specification'
 
-const W = 800
-const H = 420
 const HIT_RADIUS = 22
 const MIN_ZOOM = 1
 const MAX_ZOOM = 6
 const ZOOM_BUTTON_STEP = 1.6
 const WHEEL_STEP = 1.15
 const PAN_KEY_STEP = 60
-
-interface PlacedPin extends OriginPin {
-  cx: number
-  cy: number
-}
 
 interface ZoomState { k: number; x: number; y: number }
 const IDENTITY: ZoomState = { k: 1, x: 0, y: 0 }
@@ -30,7 +21,7 @@ export function OriginMap({ pins }: { pins: OriginPin[] }) {
   const labelT = useTranslations()
   const containerRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement>(null)
-  const [features, setFeatures] = useState<FeatureCollection<Geometry> | null>(null)
+  const features = useWorldFeatures()
   const [activeId, setActiveId] = useState<string | null>(null)
   const [pinnedId, setPinnedId] = useState<string | null>(null)
   const [zoom, setZoom] = useState<ZoomState>(IDENTITY)
@@ -39,32 +30,9 @@ export function OriginMap({ pins }: { pins: OriginPin[] }) {
   const zoomRef = useRef(zoom)
   zoomRef.current = zoom
 
-  useEffect(() => {
-    fetch(withBasePath('/world-atlas/countries-110m.json'))
-      .then(r => {
-        if (!r.ok) throw new Error(`world-atlas: HTTP ${r.status}`)
-        return r.json()
-      })
-      .then((topo: Topology) => {
-        const fc = feature(topo, topo.objects.countries as GeometryCollection) as unknown as FeatureCollection<Geometry>
-        setFeatures(fc)
-      })
-      .catch(err => {
-        console.error('OriginMap failed to load world atlas', err)
-      })
-  }, [])
+  const projection = useMemo(makeProjection, [])
 
-  const projection = useMemo(() => geoEqualEarth().scale(140).translate([W / 2, H / 2]), [])
-
-  const placed: PlacedPin[] = useMemo(() => {
-    return pins
-      .map(p => {
-        const xy = projection([p.lng, p.lat])
-        if (!xy) return null
-        return { ...p, cx: xy[0], cy: xy[1] }
-      })
-      .filter((p): p is PlacedPin => p !== null)
-  }, [pins, projection])
+  const placed: PlacedPin[] = useMemo(() => placePins(pins, projection), [pins, projection])
 
   const uniqueCountries = useMemo(() => new Set(pins.map(p => p.country)).size, [pins])
 
