@@ -7,12 +7,13 @@ import type { AddressInfo } from 'node:net'
 import { createExperimentServer } from '../../scripts/experiment-server.mjs'
 
 let base = ''
+let tmp = ''
 let root = ''
 let logDir = ''
 let server: ReturnType<typeof createExperimentServer>
 
 beforeAll(async () => {
-  const tmp = mkdtempSync(join(tmpdir(), 'exp-'))
+  tmp = mkdtempSync(join(tmpdir(), 'exp-'))
   root = join(tmp, 'out')
   logDir = join(tmp, 'logs')
   mkdirSync(join(root, 'zh/static'), { recursive: true })
@@ -26,7 +27,10 @@ beforeAll(async () => {
   base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
 })
 
-afterAll(() => { server.close() })
+afterAll(() => {
+  server.close()
+  rmSync(tmp, { recursive: true, force: true })
+})
 beforeEach(() => { rmSync(logDir, { recursive: true, force: true }) })
 
 const post = (body: string) => fetch(`${base}/api/log`, { method: 'POST', body, headers: { 'content-type': 'application/json' } })
