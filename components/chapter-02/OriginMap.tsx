@@ -4,6 +4,8 @@ import { geoPath } from 'd3-geo'
 import { useTranslations } from 'next-intl'
 import { makeProjection, placePins, MAP_W as W, MAP_H as H, type PlacedPin } from '@/lib/charts/origin-map'
 import { useWorldFeatures } from '@/lib/use-world-features'
+import { CountryPaths } from './CountryPaths'
+import { MapPinVisual } from './MapPinVisual'
 import type { OriginPin } from '@/types/chapter-02'
 
 const HIT_RADIUS = 22
@@ -356,15 +358,7 @@ export function OriginMap({ pins }: { pins: OriginPin[] }) {
           </defs>
           <g clipPath="url(#origin-map-clip)">
             <g transform={`translate(${zoom.x}, ${zoom.y}) scale(${zoom.k})`}>
-              {features.features.map((f, i) => (
-                <path
-                  key={i}
-                  d={path(f) || ''}
-                  fill="#e8e8ed"
-                  stroke="#d2d2d7"
-                  strokeWidth={0.4 / zoom.k}
-                />
-              ))}
+              <CountryPaths features={features} path={path} strokeWidth={0.4 / zoom.k} />
             </g>
 
             <g>
@@ -395,21 +389,7 @@ export function OriginMap({ pins }: { pins: OriginPin[] }) {
                     transform={`translate(${sc.cx}, ${sc.cy})`}
                   >
                     <circle r={HIT_RADIUS} fill="transparent" />
-                    <circle
-                      r={isActive ? 17 : 14}
-                      fill="white"
-                      stroke="var(--accent-02)"
-                      strokeWidth={isActive ? 3 : 2}
-                      style={{ transition: 'r 160ms ease, stroke-width 160ms ease' }}
-                    />
-                    <text
-                      textAnchor="middle"
-                      dominantBaseline="central"
-                      fontSize={isActive ? 16 : 14}
-                      style={{ pointerEvents: 'none', transition: 'font-size 160ms ease' }}
-                    >
-                      {p.emoji}
-                    </text>
+                    <MapPinVisual emoji={p.emoji} active={isActive} />
                   </g>
                 )
               })}

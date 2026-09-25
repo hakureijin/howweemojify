@@ -1,6 +1,7 @@
 'use client'
 import { useTranslations } from 'next-intl'
 import { StaticSection } from './StaticSection'
+import { StaticOriginMap } from './StaticOriginMap'
 import { Pipeline } from '@/components/chapter-02/Pipeline'
 import { CriteriaCards } from '@/components/chapter-02/CriteriaCards'
 import { CaseCards } from '@/components/chapter-02/CaseCards'
@@ -17,6 +18,7 @@ export function StaticWhoGetsIn({ data }: { data: Chapter02Data }) {
         <div className="mt-6" data-track-section="ch02-pipeline"><Pipeline steps={data.pipeline} isStatic /></div>
         <div data-track-section="ch02-criteria"><CriteriaCards criteria={data.criteria} isStatic /></div>
         <div data-track-section="ch02-cases"><CaseCards cases={data.cases} isStatic /></div>
+        <div data-track-section="ch02-map"><StaticOriginMap pins={data.origins} /></div>
       </div>
     </StaticSection>
   )
