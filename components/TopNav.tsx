@@ -1,6 +1,7 @@
 'use client'
 import { useLocale, useTranslations } from 'next-intl'
 import { usePathname, useRouter } from '@/i18n/navigation'
+import { isExperiment } from '@/lib/experiment'
 
 const CHAPTERS = ['ch01', 'ch02'] as const
 
@@ -24,13 +25,16 @@ export function TopNav() {
           {t(ch)}
         </a>
       ))}
-      <button
-        onClick={() => router.replace(pathname, { locale: otherLocale })}
-        className="ml-1 text-[13px] font-medium bg-[color:var(--accent)] hover:bg-[color:var(--accent-hover)] text-white px-3.5 py-1.5 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]/40"
-        aria-label={t('switchLangAria')}
-      >
-        {switchLabel}
-      </button>
+      {/* Participants stay in the language their link assigns them. */}
+      {!isExperiment() && (
+        <button
+          onClick={() => router.replace(pathname, { locale: otherLocale })}
+          className="ml-1 text-[13px] font-medium bg-[color:var(--accent)] hover:bg-[color:var(--accent-hover)] text-white px-3.5 py-1.5 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]/40"
+          aria-label={t('switchLangAria')}
+        >
+          {switchLabel}
+        </button>
+      )}
     </nav>
   )
 }

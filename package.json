@@ -8,7 +8,9 @@
     "start": "npx --yes serve out -l 7777",
     "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "build:experiment": "NEXT_PUBLIC_EXPERIMENT=1 next build --turbopack",
+    "experiment": "npm run build:experiment && node scripts/experiment-server.mjs"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",

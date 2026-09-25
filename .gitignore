@@ -45,3 +45,4 @@ article.docx
 .superpowers/brainstorm/*/state/
 .claude/
 .tmp/
+/logs/
