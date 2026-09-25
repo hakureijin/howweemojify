@@ -6,6 +6,7 @@ import { Citation } from '@/components/ui/Citation'
 import { ChartHeader } from '@/components/chapter-01/ChartHeader'
 import { SankeyNodeVisual } from '@/components/chapter-01/SankeyNodeVisual'
 import { usePrefersReducedMotion } from '@/lib/prefers-reduced-motion'
+import { track, hoverStart, hoverEnd } from '@/lib/tracking'
 import type {
   CategoryGroupKey,
   Chapter01VariantData,
@@ -104,6 +105,7 @@ export function VariantSankey({ data }: Props) {
   }, [pinnedId, closeAll])
 
   const onActivate = (id: SelectionId) => {
+    track('sankey', 'pin', id)
     setPinnedId(prev => (prev === id ? null : id))
   }
 
@@ -205,8 +207,8 @@ export function VariantSankey({ data }: Props) {
                   percent: ((l.value / data.snapshot.total) * 100).toFixed(1),
                 })}
                 className="cursor-pointer focus:outline-none"
-                onMouseEnter={() => setActiveId(id)}
-                onMouseLeave={() => setActiveId(null)}
+                onMouseEnter={() => { setActiveId(id); hoverStart('sankey', id) }}
+                onMouseLeave={() => { setActiveId(null); hoverEnd('sankey', id) }}
                 onFocus={() => setActiveId(id)}
                 onBlur={() => setActiveId(null)}
                 onClick={(e) => {
@@ -281,8 +283,8 @@ export function VariantSankey({ data }: Props) {
                   percent: ((n.total / data.snapshot.total) * 100).toFixed(1),
                 })}
                 className="cursor-pointer focus:outline-none"
-                onMouseEnter={() => setActiveId(n.id)}
-                onMouseLeave={() => setActiveId(null)}
+                onMouseEnter={() => { setActiveId(n.id); hoverStart('sankey', n.id) }}
+                onMouseLeave={() => { setActiveId(null); hoverEnd('sankey', n.id) }}
                 onFocus={() => setActiveId(n.id)}
                 onBlur={() => setActiveId(null)}
                 onClick={(e) => {

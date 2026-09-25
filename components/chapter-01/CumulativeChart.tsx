@@ -6,6 +6,7 @@ import { ChartHeader } from './ChartHeader'
 import { CumulativeAxes } from './CumulativeAxes'
 import { CumulativeMarker } from './CumulativeMarker'
 import { VersionDiffCard } from './VersionDiffCard'
+import { track, hoverStart, hoverEnd } from '@/lib/tracking'
 import {
   buildGeometry, buildSeries, computeVersionDiff,
   CUM_W as W, CUM_H as H, DEFAULT_FROM_ID, DEFAULT_TO_ID, RANGE_START,
@@ -88,6 +89,7 @@ export function CumulativeChart({ data }: Props) {
   }, [pinnedId, closeAll])
 
   const onMarkerActivate = (id: string) => {
+    track('cumulative', 'pin', id)
     setPinnedId(prev => (prev === id ? null : id))
   }
 
@@ -117,7 +119,7 @@ export function CumulativeChart({ data }: Props) {
           {t('diff.from')}
           <select
             value={fromId}
-            onChange={(e) => setFromId(e.target.value)}
+            onChange={(e) => { track('cumulative', 'diff', `${e.target.value}→${toId}`); setFromId(e.target.value) }}
             aria-label={t('diff.fromAria')}
             className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-white border border-[color:var(--line)] text-[color:var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-01)]/50"
           >
@@ -133,7 +135,7 @@ export function CumulativeChart({ data }: Props) {
           {t('diff.to')}
           <select
             value={toId}
-            onChange={(e) => setToId(e.target.value)}
+            onChange={(e) => { track('cumulative', 'diff', `${fromId}→${e.target.value}`); setToId(e.target.value) }}
             aria-label={t('diff.toAria')}
             className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-white border border-[color:var(--line)] text-[color:var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-01)]/50"
           >
@@ -168,7 +170,7 @@ export function CumulativeChart({ data }: Props) {
             <button
               key={r.id}
               type="button"
-              onClick={() => setRange(r.id)}
+              onClick={() => { track('cumulative', 'range', r.id); setRange(r.id) }}
               aria-pressed={active}
               className={`text-[11px] font-bold px-3 py-1 rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-01)]/50 ${
                 active
@@ -219,8 +221,8 @@ export function CumulativeChart({ data }: Props) {
               }`}
               aria-expanded={isActive}
               className="cursor-pointer focus:outline-none"
-              onMouseEnter={() => setActiveId(p.id)}
-              onMouseLeave={() => setActiveId(null)}
+              onMouseEnter={() => { setActiveId(p.id); hoverStart('cumulative', p.id) }}
+              onMouseLeave={() => { setActiveId(null); hoverEnd('cumulative', p.id) }}
               onFocus={() => setActiveId(p.id)}
               onBlur={() => setActiveId(null)}
               onClick={(e) => {

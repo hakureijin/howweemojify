@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl'
 import { Citation } from '@/components/ui/Citation'
 import { ChartHeader } from './ChartHeader'
 import { usePrefersReducedMotion } from '@/lib/prefers-reduced-motion'
+import { track, hoverStart, hoverEnd } from '@/lib/tracking'
 import { layoutTreemap, tileTextLayout, TREEMAP_W as W, TREEMAP_H as H, type TileNode } from '@/lib/charts/treemap'
 import type {
   CategoryGroupKey,
@@ -80,6 +81,7 @@ export function CategoryTreemap({ data }: Props) {
   }, [pinnedId, closeAll])
 
   const onTileActivate = (key: CategoryGroupKey) => {
+    track('treemap', 'pin', key)
     setPinnedId(prev => (prev === key ? null : key))
   }
 
@@ -89,6 +91,7 @@ export function CategoryTreemap({ data }: Props) {
   // Slider position 0..frames.length-1
   const onSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const next = Number(e.target.value)
+    track('treemap', 'slider', frames[next].year)
     setFrameIdx(next)
     closeAll()
   }
@@ -96,6 +99,7 @@ export function CategoryTreemap({ data }: Props) {
   const onSliderKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === ' ') {
       e.preventDefault()
+      track('treemap', playing ? 'pause' : 'play')
       setPlaying(p => !p)
     }
     // Home/End already handled by native range input
@@ -130,7 +134,7 @@ export function CategoryTreemap({ data }: Props) {
         {!reduced && (
           <button
             type="button"
-            onClick={() => setPlaying(p => !p)}
+            onClick={() => { track('treemap', playing ? 'pause' : 'play'); setPlaying(p => !p) }}
             aria-label={playing ? t('pauseAria') : t('playAria')}
             className="shrink-0 w-9 h-9 grid place-items-center rounded-full bg-[color:var(--accent-01)] text-white text-[12px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-01)]/50"
           >
@@ -204,8 +208,8 @@ export function CategoryTreemap({ data }: Props) {
               })}
               aria-expanded={isActive}
               className="cursor-pointer focus:outline-none"
-              onMouseEnter={() => setActiveId(tile.key)}
-              onMouseLeave={() => setActiveId(null)}
+              onMouseEnter={() => { setActiveId(tile.key); hoverStart('treemap', tile.key) }}
+              onMouseLeave={() => { setActiveId(null); hoverEnd('treemap', tile.key) }}
               onFocus={() => setActiveId(tile.key)}
               onBlur={() => setActiveId(null)}
               onClick={(e) => {

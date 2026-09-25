@@ -4,6 +4,7 @@ import { geoPath } from 'd3-geo'
 import { useTranslations } from 'next-intl'
 import { makeProjection, placePins, MAP_W as W, MAP_H as H, type PlacedPin } from '@/lib/charts/origin-map'
 import { useWorldFeatures } from '@/lib/use-world-features'
+import { track, hoverStart, hoverEnd } from '@/lib/tracking'
 import { CountryPaths } from './CountryPaths'
 import { MapPinVisual } from './MapPinVisual'
 import type { OriginPin } from '@/types/chapter-02'
@@ -31,6 +32,18 @@ export function OriginMap({ pins }: { pins: OriginPin[] }) {
   const justDraggedRef = useRef(false)
   const zoomRef = useRef(zoom)
   zoomRef.current = zoom
+
+  // Zoom changes arrive from buttons, wheel, pinch and keys; log the level the
+  // reader settles on rather than every wheel tick.
+  const loggedK = useRef(1)
+  useEffect(() => {
+    if (zoom.k === loggedK.current) return
+    const id = window.setTimeout(() => {
+      loggedK.current = zoom.k
+      track('map', 'zoom', Number(zoom.k.toFixed(1)))
+    }, 400)
+    return () => window.clearTimeout(id)
+  }, [zoom.k])
 
   const projection = useMemo(makeProjection, [])
 
@@ -122,6 +135,7 @@ export function OriginMap({ pins }: { pins: OriginPin[] }) {
       document.removeEventListener('mouseup', onDocUp)
       setDragging(false)
       if (moved) {
+        track('map', 'pan')
         setTimeout(() => { justDraggedRef.current = false }, 0)
       } else {
         justDraggedRef.current = false
@@ -183,6 +197,7 @@ export function OriginMap({ pins }: { pins: OriginPin[] }) {
         document.removeEventListener('touchcancel', onDocEnd)
         setDragging(false)
         if (moved) {
+          track('map', 'pan')
           setTimeout(() => { justDraggedRef.current = false }, 0)
         } else {
           justDraggedRef.current = false
@@ -264,6 +279,7 @@ export function OriginMap({ pins }: { pins: OriginPin[] }) {
 
   const onPinActivate = (id: string) => {
     if (justDraggedRef.current) return
+    track('map', 'pin', id)
     setPinnedId(prev => (prev === id ? null : id))
   }
 
@@ -375,8 +391,8 @@ export function OriginMap({ pins }: { pins: OriginPin[] }) {
                     aria-label={t('pinAria', { emoji: p.emoji, country: p.country, year: p.year })}
                     aria-expanded={isActive}
                     className="cursor-pointer focus:outline-none"
-                    onMouseEnter={() => setActiveId(p.id)}
-                    onMouseLeave={() => setActiveId(null)}
+                    onMouseEnter={() => { setActiveId(p.id); hoverStart('map', p.id) }}
+                    onMouseLeave={() => { setActiveId(null); hoverEnd('map', p.id) }}
                     onFocus={() => setActiveId(p.id)}
                     onBlur={() => setActiveId(null)}
                     onClick={(e) => { e.stopPropagation(); onPinActivate(p.id) }}

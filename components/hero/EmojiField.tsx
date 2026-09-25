@@ -7,6 +7,7 @@ import { HERO_EMOJIS } from '@/lib/hero-emoji-timeline'
 import { computeLayout, pickProfile } from '@/lib/hero-emoji-layout'
 import { usePrefersReducedMotion } from '@/lib/prefers-reduced-motion'
 import { useElementSize } from '@/lib/use-element-size'
+import { track } from '@/lib/tracking'
 
 type Props = {
   labelEnlarge: string  // i18n template containing __CHAR__ placeholder
@@ -21,7 +22,14 @@ export function EmojiField({ labelEnlarge, labelShrink }: Props) {
   const reducedMotion = usePrefersReducedMotion()
   const size = useElementSize(containerRef)
 
+  const positioned = useMemo(() => {
+    if (!size) return []
+    const profile = pickProfile(size.vw, size.vh)
+    return computeLayout(HERO_EMOJIS, size.vw, size.vh, profile)
+  }, [size])
+
   const toggle = (i: number) => {
+    track('hero', 'click', positioned[i]?.char)
     setActive(prev => {
       const next = new Set(prev)
       if (next.has(i)) next.delete(i)
@@ -29,12 +37,6 @@ export function EmojiField({ labelEnlarge, labelShrink }: Props) {
       return next
     })
   }
-
-  const positioned = useMemo(() => {
-    if (!size) return []
-    const profile = pickProfile(size.vw, size.vh)
-    return computeLayout(HERO_EMOJIS, size.vw, size.vh, profile)
-  }, [size])
 
   // Hover magnetic push
   useGSAP(
