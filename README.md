@@ -66,6 +66,14 @@ Events are appended to `logs/events-YYYY-MM-DD.jsonl` (UTC date, one JSON object
 
 To run on a cloud VM, copy `out/` and `scripts/experiment-server.mjs` and run `node scripts/experiment-server.mjs` (env: `PORT`, `OUT_DIR`, `LOG_DIR`). Before a session, `python3 scripts/experiment_smoke.py` checks the whole pipeline.
 
+Analysis notes:
+
+- Dedupe on `(sessionId, seq)` — a batch can arrive twice (retry after a lost response, or a beacon at page hide).
+- `maxDepthPct` is not comparable across conditions: the static page is longer, so the same reading covers a smaller share of it. Compare per-section dwell (`section_dwell`, and the `dwell` map on `heartbeat`/`session_end`) instead. A section counts as read while half of it, or half the viewport, is covered by it.
+- `interact` pin semantics: `pin` opens a tooltip, `unpin` is a second click on the same item, `close` is any other dismissal of an open tooltip (Escape, click outside, the ✕ button, or a control change that resets the chart).
+- A session restored from the browser's back/forward cache starts again with `session_start` carrying `resumed: true` (same `sessionId`, after the earlier `session_end`).
+- The interactive page hides its hint lines below the `md` breakpoint, while the static page's legend notes are always visible.
+
 Do not run `npm run build:experiment` while `npm run dev` is running — they share `.next/`.
 
 ## File layout
