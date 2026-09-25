@@ -2,6 +2,7 @@
 import { useMemo } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Citation } from '@/components/ui/Citation'
+import { ChartHeader } from '@/components/chapter-01/ChartHeader'
 import { CumulativeAxes } from '@/components/chapter-01/CumulativeAxes'
 import { CumulativeMarker, markerBaseRadius } from '@/components/chapter-01/CumulativeMarker'
 import { VersionDiffCard } from '@/components/chapter-01/VersionDiffCard'
@@ -68,18 +69,12 @@ export function StaticCumulative({ data }: { data: Chapter01Data }) {
 
   return (
     <div>
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-3">
-        <div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[color:var(--muted)]">{t('eyebrow')}</div>
-          <div className="text-base md:text-lg font-semibold mt-1 text-[color:var(--ink)]">{t('title', { lastYear: full.maxYear })}</div>
-        </div>
-        <div className="flex items-baseline gap-2">
-          <div className="display-tight text-3xl md:text-4xl font-semibold tabular text-[color:var(--accent-01)] leading-none">
-            {finalTotal.toLocaleString(locale)}
-          </div>
-          <div className="text-[11px] text-[color:var(--muted)] font-bold uppercase tracking-wider">{t('totalBy', { year: full.maxYear })}</div>
-        </div>
-      </div>
+      <ChartHeader
+        eyebrow={t('eyebrow')}
+        title={t('title', { lastYear: full.maxYear })}
+        total={finalTotal.toLocaleString(locale)}
+        totalLabel={t('totalBy', { year: full.maxYear })}
+      />
       <p className="text-[10px] text-[color:var(--muted)] mb-2">{st('note')}</p>
 
       <NumberedChart id="full" geometry={full} numbers={numbers} diff={diff} locale={locale}

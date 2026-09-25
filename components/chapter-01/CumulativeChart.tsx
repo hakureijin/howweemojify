@@ -2,6 +2,7 @@
 import { useMemo, useState, useEffect, useRef, useCallback } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Citation } from '@/components/ui/Citation'
+import { ChartHeader } from './ChartHeader'
 import { CumulativeAxes } from './CumulativeAxes'
 import { CumulativeMarker } from './CumulativeMarker'
 import { VersionDiffCard } from './VersionDiffCard'
@@ -151,24 +152,12 @@ export function CumulativeChart({ data }: Props) {
   return (
     <div className="relative" ref={containerRef}>
       {/* Title row + headline total */}
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-3">
-        <div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[color:var(--muted)]">
-            {t('eyebrow')}
-          </div>
-          <div className="text-base md:text-lg font-semibold mt-1 text-[color:var(--ink)]">
-            {t('title', { lastYear: fullMaxYear })}
-          </div>
-        </div>
-        <div className="flex items-baseline gap-2">
-          <div className="display-tight text-3xl md:text-4xl font-semibold tabular text-[color:var(--accent-01)] leading-none">
-            {fullFinalTotal.toLocaleString(locale)}
-          </div>
-          <div className="text-[11px] text-[color:var(--muted)] font-bold uppercase tracking-wider">
-            {t('totalBy', { year: fullMaxYear })}
-          </div>
-        </div>
-      </div>
+      <ChartHeader
+        eyebrow={t('eyebrow')}
+        title={t('title', { lastYear: fullMaxYear })}
+        total={fullFinalTotal.toLocaleString(locale)}
+        totalLabel={t('totalBy', { year: fullMaxYear })}
+      />
 
       {/* Range filter buttons */}
       <div className="flex items-center gap-2 mb-2 flex-wrap">
