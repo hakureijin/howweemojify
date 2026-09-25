@@ -18,6 +18,7 @@ export function StaticStory({ ch02 }: Props) {
       <StaticHero />
       <StaticSection id="ch01" accent="var(--accent-01)" className="!py-0">
         {/* §01 charts are added in Tasks 6–8 */}
+        {null}
       </StaticSection>
       <StaticWhoGetsIn data={ch02} />
     </>

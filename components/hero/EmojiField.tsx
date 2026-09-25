@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { gsap } from 'gsap'
 import { useGSAP } from '@gsap/react'
 import { HERO_EMOJIS } from '@/lib/hero-emoji-timeline'
 import { computeLayout, pickProfile } from '@/lib/hero-emoji-layout'
 import { usePrefersReducedMotion } from '@/lib/prefers-reduced-motion'
+import { useElementSize } from '@/lib/use-element-size'
 
 type Props = {
   labelEnlarge: string  // i18n template containing __CHAR__ placeholder
@@ -14,12 +15,11 @@ type Props = {
 
 export function EmojiField({ labelEnlarge, labelShrink }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const debounceRef = useRef<number | null>(null)
   const emojiRefs = useRef<(HTMLButtonElement | null)[]>([])
   const quickToRefs = useRef<Array<{ x: (v: number) => void; y: (v: number) => void } | null>>([])
-  const [size, setSize] = useState<{ vw: number; vh: number } | null>(null)
   const [active, setActive] = useState<Set<number>>(new Set())
   const reducedMotion = usePrefersReducedMotion()
+  const size = useElementSize(containerRef)
 
   const toggle = (i: number) => {
     setActive(prev => {
@@ -29,25 +29,6 @@ export function EmojiField({ labelEnlarge, labelShrink }: Props) {
       return next
     })
   }
-
-  useLayoutEffect(() => {
-    const el = containerRef.current
-    if (!el) return
-    const measure = () => {
-      const rect = el.getBoundingClientRect()
-      setSize({ vw: rect.width, vh: rect.height })
-    }
-    measure()
-    const ro = new ResizeObserver(() => {
-      if (debounceRef.current) window.clearTimeout(debounceRef.current)
-      debounceRef.current = window.setTimeout(measure, 150)
-    })
-    ro.observe(el)
-    return () => {
-      ro.disconnect()
-      if (debounceRef.current) window.clearTimeout(debounceRef.current)
-    }
-  }, [])
 
   const positioned = useMemo(() => {
     if (!size) return []

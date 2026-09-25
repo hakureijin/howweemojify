@@ -1,34 +1,15 @@
 'use client'
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { HERO_EMOJIS } from '@/lib/hero-emoji-timeline'
 import { computeLayout, pickProfile } from '@/lib/hero-emoji-layout'
+import { useElementSize } from '@/lib/use-element-size'
 
 /** Same wallpaper positions as the interactive hero (same layout function and
  *  profiles), but plain glyphs: no drift, no hover push, no click-to-enlarge. */
 function StaticEmojiField() {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [size, setSize] = useState<{ vw: number; vh: number } | null>(null)
-
-  useLayoutEffect(() => {
-    const el = containerRef.current
-    if (!el) return
-    let timer: number | null = null
-    const measure = () => {
-      const rect = el.getBoundingClientRect()
-      setSize({ vw: rect.width, vh: rect.height })
-    }
-    measure()
-    const ro = new ResizeObserver(() => {
-      if (timer) window.clearTimeout(timer)
-      timer = window.setTimeout(measure, 150)
-    })
-    ro.observe(el)
-    return () => {
-      ro.disconnect()
-      if (timer) window.clearTimeout(timer)
-    }
-  }, [])
+  const size = useElementSize(containerRef)
 
   const positioned = useMemo(
     () => (size ? computeLayout(HERO_EMOJIS, size.vw, size.vh, pickProfile(size.vw, size.vh)) : []),
