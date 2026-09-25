@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useLocale, useTranslations } from 'next-intl'
 import { Citation } from '@/components/ui/Citation'
+import { ChartHeader } from './ChartHeader'
 import { usePrefersReducedMotion } from '@/lib/prefers-reduced-motion'
 import { layoutTreemap, tileTextLayout, TREEMAP_W as W, TREEMAP_H as H, type TileNode } from '@/lib/charts/treemap'
 import type {
@@ -116,27 +117,13 @@ export function CategoryTreemap({ data }: Props) {
   return (
     <div className="relative" ref={containerRef}>
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-3">
-        <div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[color:var(--muted)]">
-            {t('eyebrow')}
-          </div>
-          <div className="text-base md:text-lg font-semibold mt-1 text-[color:var(--ink)]">
-            {t('title')}
-          </div>
-          <div className="text-[11px] text-[color:var(--muted)] mt-1 max-w-xl">
-            {t('subtitle')}
-          </div>
-        </div>
-        <div className="flex items-baseline gap-2">
-          <div className="display-tight text-3xl md:text-4xl font-semibold tabular text-[color:var(--accent-01)] leading-none">
-            {frame.total.toLocaleString(locale)}
-          </div>
-          <div className="text-[11px] text-[color:var(--muted)] font-bold uppercase tracking-wider">
-            {t('totalBy', { version: frame.versionLabel })}
-          </div>
-        </div>
-      </div>
+      <ChartHeader
+        eyebrow={t('eyebrow')}
+        title={t('title')}
+        subtitle={t('subtitle')}
+        total={frame.total.toLocaleString(locale)}
+        totalLabel={t('totalBy', { version: frame.versionLabel })}
+      />
 
       {/* Slider row */}
       <div className="flex items-center gap-3 mb-2">
