@@ -5,7 +5,7 @@ import { EmojiField } from '@/components/hero/EmojiField'
 export function Hero() {
   const t = useTranslations('hero')
   return (
-    <header className="relative h-[88vh] overflow-hidden bg-[var(--bg)]">
+    <header data-track-section="hero" className="relative h-[88vh] overflow-hidden bg-[var(--bg)]">
       <EmojiField
         labelEnlarge={t('enlarge', { char: '__CHAR__' })}
         labelShrink={t('shrink', { char: '__CHAR__' })}

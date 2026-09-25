@@ -40,7 +40,7 @@ export function Footer() {
   const sources = collect().sort((a, b) => a.publisher.localeCompare(b.publisher))
 
   return (
-    <footer className="bg-white border-t border-[color:var(--line)] py-14 px-6 text-sm">
+    <footer data-track-section="footer" className="bg-white border-t border-[color:var(--line)] py-14 px-6 text-sm">
       <div className="max-w-4xl mx-auto">
         <h3 className="text-lg font-semibold tracking-tight text-[color:var(--ink)]">{t('heading')}</h3>
         <ol className="mt-4 space-y-3">

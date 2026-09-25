@@ -2,6 +2,7 @@ import { setRequestLocale } from 'next-intl/server'
 import { TopNav } from '@/components/TopNav'
 import { Footer } from '@/components/Footer'
 import { StaticStory } from '@/components/static/StaticStory'
+import { TrackingRoot } from '@/components/TrackingRoot'
 
 import ch01 from '@/data/chapter-01.json'
 import ch01Cat from '@/data/chapter-01-categories.json'
@@ -26,6 +27,7 @@ export default async function StaticPage({ params }: { params: Promise<{ locale:
         ch02={ch02 as Chapter02Data}
       />
       <Footer />
+      <TrackingRoot condition="static" />
     </>
   )
 }

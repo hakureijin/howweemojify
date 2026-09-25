@@ -7,6 +7,7 @@ import { VariantSankey } from '@/components/chapter-01/VariantSankey'
 import { Section } from '@/components/ui/Section'
 import { WhoGetsIn } from '@/components/chapter-02/WhoGetsIn'
 import { Footer } from '@/components/Footer'
+import { TrackingRoot } from '@/components/TrackingRoot'
 
 import ch01 from '@/data/chapter-01.json'
 import ch01Cat from '@/data/chapter-01-categories.json'
@@ -28,15 +29,15 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
       <TopNav />
       <Hero />
       <Section id="ch01" accent="var(--accent-01)" className="!py-0">
-        <div className="max-w-6xl mx-auto px-6 pt-12 pb-8">
+        <div data-track-section="ch01-cumulative" className="max-w-6xl mx-auto px-6 pt-12 pb-8">
           <CumulativeChart data={ch01 as Chapter01Data} />
         </div>
-        <div className="max-w-6xl mx-auto px-6 pt-2 pb-8 border-t border-[color:var(--line)]/40">
+        <div data-track-section="ch01-treemap" className="max-w-6xl mx-auto px-6 pt-2 pb-8 border-t border-[color:var(--line)]/40">
           <div className="pt-8">
             <CategoryTreemap data={ch01Cat as Chapter01CategoryData} />
           </div>
         </div>
-        <div className="max-w-6xl mx-auto px-6 pt-2 pb-16 border-t border-[color:var(--line)]/40">
+        <div data-track-section="ch01-sankey" className="max-w-6xl mx-auto px-6 pt-2 pb-16 border-t border-[color:var(--line)]/40">
           <div className="pt-8">
             <VariantSankey data={ch01Var as Chapter01VariantData} />
           </div>
@@ -44,6 +45,7 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
       </Section>
       <WhoGetsIn data={ch02 as Chapter02Data} />
       <Footer />
+      <TrackingRoot condition="interactive" />
     </>
   )
 }
