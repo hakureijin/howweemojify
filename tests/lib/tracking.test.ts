@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import {
   createQueue, createDwell, createHoverTimer, isSectionActive, makeId,
   setActiveTracker, track, hoverStart, hoverEnd,
-  FLUSH_THRESHOLD, MAX_BATCH, MAX_QUEUE, type Transport,
+  FLUSH_THRESHOLD, MAX_BATCH, MAX_BATCH_BYTES, MAX_QUEUE, type Transport,
 } from '@/lib/tracking'
 
 const ctx = { pid: 'P1', sessionId: 's', condition: 'static' as const, locale: 'zh' }
@@ -72,15 +72,76 @@ describe('createQueue', () => {
     expect(q.size()).toBe(1)
   })
 
-  it('sends at most MAX_BATCH per request and caps the queue', () => {
+  it('sends at most MAX_BATCH per request and caps the queue', async () => {
     const { t, beacons } = fakeTransport()
-    const q = createQueue(ctx, { ...t, post: async () => false }, env())
+    // Capture the exact promise the auto-triggered flush() (fired once the push loop
+    // crosses FLUSH_THRESHOLD) is awaiting, so the test can wait for it to settle before
+    // exercising flushBeacon — otherwise that flush is still "in flight" when flushBeacon
+    // runs and (correctly, per the in-flight dedup fix) withholds the events it claimed.
+    let pending: Promise<boolean> = Promise.resolve(true)
+    const post = () => { pending = Promise.resolve(false); return pending }
+    const q = createQueue(ctx, { ...t, post }, env())
     for (let i = 0; i < MAX_QUEUE + 10; i++) q.push('e')
     expect(q.size()).toBe(MAX_QUEUE)
+    await pending
     q.flushBeacon()
     expect(beacons.every(b => b.length <= MAX_BATCH)).toBe(true)
     expect(beacons.flat()).toHaveLength(MAX_QUEUE)
     expect((beacons[0][0] as { seq: number }).seq).toBe(11)
+  })
+
+  it('never lets the caller payload overwrite the envelope fields', () => {
+    const { t, beacons } = fakeTransport()
+    const q = createQueue(ctx, t, env({ t: 42 }))
+    q.push('x', { seq: 999, t: -1 })
+    q.flushBeacon()
+    const [ev] = beacons.flat() as { seq: number; t: number }[]
+    expect(ev.seq).toBe(1)
+    expect(ev.t).toBe(42)
+  })
+
+  it('flushBeacon does not resend events already claimed by an in-flight flush()', () => {
+    const { t, beacons } = fakeTransport()
+    const q = createQueue(ctx, { ...t, post: () => new Promise<boolean>(() => {}) }, env())
+    q.push('a'); q.push('b'); q.push('c')
+    void q.flush()
+    q.push('d'); q.push('e')
+    q.flushBeacon()
+    const events = beacons.flat() as { seq: number }[]
+    expect(events.map(e => e.seq)).toEqual([4, 5])
+  })
+
+  it('bounds each batch by serialized byte size, delivering the rest via later flushes', async () => {
+    const bodies: string[] = []
+    const t: Transport = { post: async body => { bodies.push(body); return true }, beacon: () => true }
+    const q = createQueue(ctx, t, env())
+    const blob = 'x'.repeat(3000)
+    for (let i = 0; i < 30; i++) q.push('e', { blob })
+    await q.flush()
+    expect(bodies[0].length).toBeLessThanOrEqual(MAX_BATCH_BYTES)
+    const firstBatchCount = (JSON.parse(bodies[0]) as unknown[]).length
+    expect(firstBatchCount).toBeGreaterThan(0)
+    expect(firstBatchCount).toBeLessThan(30) // 30 * ~3 KB does not fit in one MAX_BATCH_BYTES batch
+    while (q.size() > 0) await q.flush()
+    const delivered = bodies.reduce((n, b) => n + (JSON.parse(b) as unknown[]).length, 0)
+    expect(delivered).toBe(30)
+  })
+
+  it('drops a single event too large to ever fit in a batch, and still posts the rest', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const { t, posts } = fakeTransport()
+      const q = createQueue(ctx, t, env())
+      q.push('big', { blob: 'x'.repeat(70_000) })
+      q.push('normal', { n: 1 })
+      await q.flush()
+      expect(warn).toHaveBeenCalledWith('[tracking] dropped oversized event', 'big', 1)
+      expect(posts[0]).toHaveLength(1)
+      expect(posts[0][0]).toMatchObject({ type: 'normal' })
+      expect(q.size()).toBe(0)
+    } finally {
+      warn.mockRestore()
+    }
   })
 })
 
@@ -118,7 +179,9 @@ describe('hover timer and singleton', () => {
     const h = createHoverTimer(() => clock.t)
     h.start('k'); clock.t = 299
     expect(h.end('k')).toBeNull()
-    h.start('k'); clock.t = 700
+    h.start('k'); clock.t += 300
+    expect(h.end('k')).toBe(300)
+    h.start('k'); clock.t += 401
     expect(h.end('k')).toBe(401)
   })
 

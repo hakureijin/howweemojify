@@ -15,6 +15,7 @@ export interface Transport {
 type Payload = Record<string, unknown>
 
 export const MAX_BATCH = 50 // well under the server's 100-event / 64 KB limit
+export const MAX_BATCH_BYTES = 60_000 // bytes; leaves headroom under the server's 64 KB limit
 export const FLUSH_THRESHOLD = 20
 export const FLUSH_MS = 5000
 export const HEARTBEAT_MS = 15000
@@ -43,12 +44,40 @@ export function createQueue(
   let queue: Payload[] = []
   let seq = 0
   let inflight = false
+  // The highest seq owned by flush()'s outstanding POST, valid only while `inflight` is
+  // true. flushBeacon must not resend those events (they may still be acknowledged by the
+  // in-flight request) — it only drains events past this point.
+  let inflightLastSeq = 0
+
+  /** Drops (and warns about) any queued event that alone exceeds MAX_BATCH_BYTES — it could
+   *  never be delivered in any batch, and must not block the queue forever — then returns up
+   *  to MAX_BATCH events, matching `eligible`, from the front of the queue whose combined
+   *  JSON size stays within MAX_BATCH_BYTES. Shared by flush() and flushBeacon(). */
+  const selectBatch = (eligible: (e: Payload) => boolean = () => true): Payload[] => {
+    queue = queue.filter(e => {
+      if (JSON.stringify(e).length > MAX_BATCH_BYTES) {
+        console.warn('[tracking] dropped oversized event', e.type, e.seq)
+        return false
+      }
+      return true
+    })
+    const batch: Payload[] = []
+    for (const e of queue) {
+      if (!eligible(e)) continue
+      if (batch.length >= MAX_BATCH) break
+      if (JSON.stringify([...batch, e]).length > MAX_BATCH_BYTES) break
+      batch.push(e)
+    }
+    return batch
+  }
 
   const flush = async () => {
     if (inflight || queue.length === 0) return
-    const batch = queue.slice(0, MAX_BATCH)
+    const batch = selectBatch()
+    if (batch.length === 0) return
     const lastSeq = batch[batch.length - 1].seq as number
     inflight = true
+    inflightLastSeq = lastSeq
     let ok = false
     try {
       ok = await transport.post(JSON.stringify(batch))
@@ -64,16 +93,18 @@ export function createQueue(
   return {
     push(type, payload = {}) {
       seq += 1
-      queue.push({ ...ctx, ...env.viewport(), type, t: env.now(), seq, ...payload })
+      queue.push({ ...payload, ...ctx, ...env.viewport(), type, t: env.now(), seq })
       if (queue.length > MAX_QUEUE) queue = queue.slice(queue.length - MAX_QUEUE)
       if (queue.length >= FLUSH_THRESHOLD) void flush()
     },
     flush,
     flushBeacon() {
-      while (queue.length > 0) {
-        const batch = queue.slice(0, MAX_BATCH)
+      while (true) {
+        const batch = selectBatch(inflight ? e => (e.seq as number) > inflightLastSeq : undefined)
+        if (batch.length === 0) break
         if (!transport.beacon(JSON.stringify(batch))) break
-        queue = queue.slice(batch.length)
+        const sent = new Set(batch.map(e => e.seq))
+        queue = queue.filter(e => !sent.has(e.seq as number))
       }
     },
     size: () => queue.length,
