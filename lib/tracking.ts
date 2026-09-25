@@ -29,6 +29,9 @@ export function makeId(fill: (buf: Uint8Array) => Uint8Array = buf => crypto.get
   return Array.from(fill(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('')
 }
 
+const encoder = new TextEncoder()
+const byteLength = (text: string) => encoder.encode(text).length
+
 export interface EventQueue {
   push(type: string, payload?: Payload): void
   flush(): Promise<void>
@@ -52,10 +55,11 @@ export function createQueue(
   /** Drops (and warns about) any queued event that alone exceeds MAX_BATCH_BYTES — it could
    *  never be delivered in any batch, and must not block the queue forever — then returns up
    *  to MAX_BATCH events, matching `eligible`, from the front of the queue whose combined
-   *  JSON size stays within MAX_BATCH_BYTES. Shared by flush() and flushBeacon(). */
+   *  JSON size — in UTF-8 bytes, as the server counts it — stays within MAX_BATCH_BYTES.
+   *  Shared by flush() and flushBeacon(). */
   const selectBatch = (eligible: (e: Payload) => boolean = () => true): Payload[] => {
     queue = queue.filter(e => {
-      if (JSON.stringify(e).length > MAX_BATCH_BYTES) {
+      if (byteLength(JSON.stringify(e)) > MAX_BATCH_BYTES) {
         console.warn('[tracking] dropped oversized event', e.type, e.seq)
         return false
       }
@@ -65,7 +69,7 @@ export function createQueue(
     for (const e of queue) {
       if (!eligible(e)) continue
       if (batch.length >= MAX_BATCH) break
-      if (JSON.stringify([...batch, e]).length > MAX_BATCH_BYTES) break
+      if (byteLength(JSON.stringify([...batch, e])) > MAX_BATCH_BYTES) break
       batch.push(e)
     }
     return batch

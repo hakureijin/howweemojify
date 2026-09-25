@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { initTracking } from '@/lib/tracking-session'
-import { track } from '@/lib/tracking'
+import { track, FLUSH_THRESHOLD } from '@/lib/tracking'
 
 // The section's viewport-relative rect, read by initTracking via getBoundingClientRect.
 let rect = { top: 0, bottom: 500 }
@@ -89,5 +89,49 @@ describe('initTracking', () => {
     stop()
     window.dispatchEvent(new Event('scroll'))
     expect(rafQueue).toHaveLength(0)
+  })
+
+  it.each([
+    [400, true],
+    [413, true],
+    [500, false],
+    [503, false],
+  ])('a %i response counts as delivered: %s', async (status, delivered) => {
+    vi.stubEnv('NEXT_PUBLIC_EXPERIMENT', '1')
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status })))
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const stop = initTracking({ condition: 'static', locale: 'zh' })
+    for (let i = 1; i < FLUSH_THRESHOLD; i++) track('x', 'y') // + session_start = auto-flush
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1))
+    await new Promise(r => setTimeout(r, 0)) // let the queue settle the response
+
+    window.dispatchEvent(new Event('pagehide'))
+    // Everything sent after the first post: later posts plus beacons.
+    const laterPosts = (fetch as ReturnType<typeof vi.fn>).mock.calls.slice(1)
+      .flatMap(c => JSON.parse((c[1] as RequestInit).body as string) as Record<string, unknown>[])
+    const resent = [...laterPosts, ...sentEvents()].filter(e => e.type === 'interact')
+    expect(resent).toHaveLength(delivered ? 0 : FLUSH_THRESHOLD - 1)
+    if (delivered) expect(warn).toHaveBeenCalledWith('[tracking] server rejected batch', status)
+    else expect(warn).not.toHaveBeenCalled()
+    stop()
+  })
+
+  it('brackets a session restored from the bfcache with a resumed session_start', () => {
+    vi.stubEnv('NEXT_PUBLIC_EXPERIMENT', '1')
+    const stop = initTracking({ condition: 'static', locale: 'zh' })
+    const pageshow = (persisted: boolean) =>
+      window.dispatchEvent(Object.assign(new Event('pageshow'), { persisted }))
+
+    pageshow(false) // an ordinary load is not a resume
+    window.dispatchEvent(new Event('pagehide'))
+    pageshow(true)
+    track('x', 'after-restore')
+    window.dispatchEvent(new Event('pagehide'))
+
+    const types = sentEvents().map(e => e.type)
+    expect(types).toEqual(['session_start', 'session_end', 'session_start', 'interact', 'session_end'])
+    expect(sentEvents()[0]).not.toHaveProperty('resumed')
+    expect(sentEvents()[2]).toMatchObject({ type: 'session_start', resumed: true })
+    stop()
   })
 })

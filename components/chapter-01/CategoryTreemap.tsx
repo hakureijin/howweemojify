@@ -57,7 +57,11 @@ export function CategoryTreemap({ data }: Props) {
     return () => window.clearInterval(id)
   }, [playing, reduced, frames.length])
 
+  // Mirrors pinnedId so closeAll (stable, used by effects) can tell whether anything was open.
+  const pinnedRef = useRef(pinnedId)
+  useEffect(() => { pinnedRef.current = pinnedId }, [pinnedId])
   const closeAll = useCallback(() => {
+    if (pinnedRef.current !== null) track('treemap', 'close')
     setActiveId(null)
     setPinnedId(null)
   }, [])
@@ -81,7 +85,7 @@ export function CategoryTreemap({ data }: Props) {
   }, [pinnedId, closeAll])
 
   const onTileActivate = (key: CategoryGroupKey) => {
-    track('treemap', 'pin', key)
+    track('treemap', pinnedId === key ? 'unpin' : 'pin', key)
     setPinnedId(prev => (prev === key ? null : key))
   }
 

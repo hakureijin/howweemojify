@@ -16,7 +16,15 @@ export function initTracking({ condition, locale }: { condition: Condition; loca
   const transport: Transport = {
     post: body =>
       fetch(endpoint, { method: 'POST', body, keepalive: true, headers: { 'content-type': 'application/json' } })
-        .then(r => r.ok),
+        .then(r => {
+          // A 4xx means the server will never accept this batch: count it as delivered so
+          // the queue does not retry it forever. 5xx and network errors are retried.
+          if (r.status >= 400 && r.status < 500) {
+            console.warn('[tracking] server rejected batch', r.status)
+            return true
+          }
+          return r.ok
+        }),
     beacon: body =>
       typeof navigator.sendBeacon === 'function' &&
       navigator.sendBeacon(endpoint, new Blob([body], { type: 'application/json' })),
@@ -61,6 +69,13 @@ export function initTracking({ condition, locale }: { condition: Condition; loca
     queue.push('session_end', { ms: now() - startedAt, dwell: dwell.totals(), maxDepthPct })
     queue.flushBeacon()
   }
+  // A page restored from the bfcache keeps this closure alive but has already sent
+  // session_end: reopen the session so post-restore events are bracketed again.
+  const onPageShow = (e: PageTransitionEvent) => {
+    if (!e.persisted) return
+    ended = false
+    queue.push('session_start', { resumed: true })
+  }
   const onClick = (e: MouseEvent) => {
     const a = (e.target as Element | null)?.closest?.('a[href]')
     if (a) queue.push('link', { href: a.getAttribute('href') })
@@ -99,6 +114,7 @@ export function initTracking({ condition, locale }: { condition: Condition; loca
   window.addEventListener('resize', evaluateSections)
   document.addEventListener('visibilitychange', onVisibility)
   window.addEventListener('pagehide', onPageHide)
+  window.addEventListener('pageshow', onPageShow)
   document.addEventListener('click', onClick, true)
 
   return () => {
@@ -110,6 +126,7 @@ export function initTracking({ condition, locale }: { condition: Condition; loca
     window.removeEventListener('scroll', onScroll)
     document.removeEventListener('visibilitychange', onVisibility)
     window.removeEventListener('pagehide', onPageHide)
+    window.removeEventListener('pageshow', onPageShow)
     document.removeEventListener('click', onClick, true)
     setActiveTracker(null)
   }

@@ -127,6 +127,19 @@ describe('createQueue', () => {
     expect(delivered).toBe(30)
   })
 
+  it('measures batch size in UTF-8 bytes, so CJK/emoji payloads never exceed MAX_BATCH_BYTES', async () => {
+    const bodies: string[] = []
+    const t: Transport = { post: async body => { bodies.push(body); return true }, beacon: () => true }
+    const q = createQueue(ctx, t, env())
+    const text = '移民签证🌍'.repeat(500) // 3,000 UTF-16 code units but 8,000 UTF-8 bytes
+    for (let i = 0; i < 30; i++) q.push('e', { text })
+    while (q.size() > 0) await q.flush()
+    const bytes = (b: string) => new TextEncoder().encode(b).length
+    expect(bodies.length).toBeGreaterThan(1)
+    for (const b of bodies) expect(bytes(b)).toBeLessThanOrEqual(MAX_BATCH_BYTES)
+    expect(bodies.reduce((n, b) => n + (JSON.parse(b) as unknown[]).length, 0)).toBe(30)
+  })
+
   it('drops a single event too large to ever fit in a batch, and still posts the rest', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     try {

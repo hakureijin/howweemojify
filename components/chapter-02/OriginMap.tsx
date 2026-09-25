@@ -255,7 +255,11 @@ export function OriginMap({ pins }: { pins: OriginPin[] }) {
   const visibleId = pinnedId ?? activeId
   const activePin = placed.find(p => p.id === visibleId) ?? null
 
+  // Mirrors pinnedId so closeAll (stable, used by effects) can tell whether anything was open.
+  const pinnedRef = useRef(pinnedId)
+  useEffect(() => { pinnedRef.current = pinnedId }, [pinnedId])
   const closeAll = useCallback(() => {
+    if (pinnedRef.current !== null) track('map', 'close')
     setActiveId(null)
     setPinnedId(null)
   }, [])
@@ -279,7 +283,7 @@ export function OriginMap({ pins }: { pins: OriginPin[] }) {
 
   const onPinActivate = (id: string) => {
     if (justDraggedRef.current) return
-    track('map', 'pin', id)
+    track('map', pinnedId === id ? 'unpin' : 'pin', id)
     setPinnedId(prev => (prev === id ? null : id))
   }
 

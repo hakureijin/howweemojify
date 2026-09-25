@@ -82,7 +82,11 @@ export function VariantSankey({ data }: Props) {
     [visibleId, layout.links],
   )
 
+  // Mirrors pinnedId so closeAll (stable, used by effects) can tell whether anything was open.
+  const pinnedRef = useRef(pinnedId)
+  useEffect(() => { pinnedRef.current = pinnedId }, [pinnedId])
   const closeAll = useCallback(() => {
+    if (pinnedRef.current !== null) track('sankey', 'close')
     setActiveId(null)
     setPinnedId(null)
   }, [])
@@ -105,7 +109,7 @@ export function VariantSankey({ data }: Props) {
   }, [pinnedId, closeAll])
 
   const onActivate = (id: SelectionId) => {
-    track('sankey', 'pin', id)
+    track('sankey', pinnedId === id ? 'unpin' : 'pin', id)
     setPinnedId(prev => (prev === id ? null : id))
   }
 

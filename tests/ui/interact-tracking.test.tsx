@@ -7,6 +7,20 @@ import { renderIntl, msg } from '../helpers/intl'
 vi.mock('@/lib/tracking', () => ({ track: vi.fn(), hoverStart: vi.fn(), hoverEnd: vi.fn() }))
 
 import { track, hoverStart } from '@/lib/tracking'
+
+const calls = (target: string) => vi.mocked(track).mock.calls.filter(c => c[0] === target).map(c => c[1])
+
+/** Click, click the same element again, click again, Escape, Escape: expects pin → unpin
+ *  → pin → close, and no second close when nothing is open. */
+function pinUnpinClose(target: string, el: Element) {
+  fireEvent.click(el)
+  fireEvent.click(el)
+  fireEvent.click(el)
+  fireEvent.keyDown(document, { key: 'Escape' })
+  fireEvent.keyDown(document, { key: 'Escape' })
+  expect(calls(target).filter(a => ['pin', 'unpin', 'close'].includes(a as string)))
+    .toEqual(['pin', 'unpin', 'pin', 'close'])
+}
 import { CumulativeChart } from '@/components/chapter-01/CumulativeChart'
 import { CategoryTreemap } from '@/components/chapter-01/CategoryTreemap'
 import { VariantSankey } from '@/components/chapter-01/VariantSankey'
@@ -63,5 +77,33 @@ describe('interaction events', () => {
     await waitFor(() => expect(track).toHaveBeenCalledWith('map', 'zoom', 1.6), { timeout: 1500 })
     fireEvent.click(container.querySelector('[data-pin="true"]')!)
     expect(track).toHaveBeenCalledWith('map', 'pin', expect.any(String))
+  })
+
+  it.each([
+    ['cumulative', () => renderIntl(<CumulativeChart data={ch01 as Chapter01Data} />), 'svg [role="button"]'],
+    ['treemap', () => renderIntl(<CategoryTreemap data={cat as Chapter01CategoryData} />), 'svg [role="button"]'],
+    ['sankey', () => renderIntl(<VariantSankey data={v as Chapter01VariantData} />), 'svg [role="button"]'],
+  ] as const)('%s: a second click unpins, Escape closes once', (target, render, selector) => {
+    const { container } = render()
+    pinUnpinClose(target, container.querySelector(selector)!)
+  })
+
+  it('map: a second click unpins, Escape closes once, the close button logs close', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(atlas, { status: 200 })))
+    const { container } = renderIntl(<OriginMap pins={ch02.origins as OriginPin[]} />)
+    await screen.findByRole('button', { name: msg('zh', 'ch02.map.zoomIn') })
+    const pin = container.querySelector('[data-pin="true"]')!
+    pinUnpinClose('map', pin)
+    vi.mocked(track).mockClear()
+    fireEvent.click(pin)
+    // The tooltip wrapper is aria-hidden (pointer-only), hence hidden: true.
+    fireEvent.click(screen.getByRole('button', { name: msg('zh', 'ch02.map.close'), hidden: true }))
+    expect(calls('map')).toEqual(['pin', 'close'])
+  })
+
+  it('cumulative: changing range with nothing pinned logs no close', () => {
+    renderIntl(<CumulativeChart data={ch01 as Chapter01Data} />)
+    fireEvent.click(screen.getByRole('button', { name: msg('zh', 'ch01.chart.range2015') }))
+    expect(calls('cumulative')).toEqual(['range'])
   })
 })

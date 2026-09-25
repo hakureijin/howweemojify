@@ -63,7 +63,11 @@ export function CumulativeChart({ data }: Props) {
   const visibleId = pinnedId ?? activeId
   const activePoint = points.find(p => p.id === visibleId) ?? null
 
+  // Mirrors pinnedId so closeAll (stable, used by effects) can tell whether anything was open.
+  const pinnedRef = useRef(pinnedId)
+  useEffect(() => { pinnedRef.current = pinnedId }, [pinnedId])
   const closeAll = useCallback(() => {
+    if (pinnedRef.current !== null) track('cumulative', 'close')
     setActiveId(null)
     setPinnedId(null)
   }, [])
@@ -89,7 +93,7 @@ export function CumulativeChart({ data }: Props) {
   }, [pinnedId, closeAll])
 
   const onMarkerActivate = (id: string) => {
-    track('cumulative', 'pin', id)
+    track('cumulative', pinnedId === id ? 'unpin' : 'pin', id)
     setPinnedId(prev => (prev === id ? null : id))
   }
 
