@@ -1,48 +1,25 @@
 'use client'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { hierarchy, treemap, treemapSquarify } from 'd3-hierarchy'
 import { motion } from 'framer-motion'
 import { useLocale, useTranslations } from 'next-intl'
 import { Citation } from '@/components/ui/Citation'
 import { usePrefersReducedMotion } from '@/lib/prefers-reduced-motion'
+import { layoutTreemap, tileTextLayout, TREEMAP_W as W, TREEMAP_H as H, type TileNode } from '@/lib/charts/treemap'
 import type {
-  CategoryFrame,
   CategoryGroupKey,
   Chapter01CategoryData,
 } from '@/types/chapter-01'
 
-const W = 880
-const H = 460
+// Re-exported for tests/logic/category-frame.test.ts.
+export { frameAt } from '@/lib/charts/treemap'
+export type { FrameLookup } from '@/lib/charts/treemap'
+
 const ANIM_MS = 600
 const PLAY_STEP_MS = 1600
 const TICK_LABEL_YEARS = new Set([2010, 2015, 2020, 2025])
 
 interface Props {
   data: Chapter01CategoryData
-}
-
-interface TileNode {
-  key: CategoryGroupKey
-  count: number
-  x: number
-  y: number
-  w: number
-  h: number
-}
-
-export interface FrameLookup {
-  frame: CategoryFrame
-  index: number
-}
-
-/** Pure helper: pick the frame whose year is closest to (but not exceeding) the
- *  requested year. Used both by the slider and by the test suite. */
-export function frameAt(frames: CategoryFrame[], year: number): FrameLookup {
-  let idx = 0
-  for (let i = 0; i < frames.length; i++) {
-    if (frames[i].year <= year) idx = i
-  }
-  return { frame: frames[idx], index: idx }
 }
 
 export function CategoryTreemap({ data }: Props) {
@@ -60,32 +37,7 @@ export function CategoryTreemap({ data }: Props) {
   const frame = frames[frameIdx]
 
   // Treemap layout for current frame
-  const tiles: TileNode[] = useMemo(() => {
-    const root = hierarchy<{ key?: CategoryGroupKey; value?: number; children?: { key: CategoryGroupKey; value: number }[] }>(
-      {
-        children: data.groupOrder.map(key => ({ key, value: frame.counts[key] })),
-      },
-    )
-      .sum(d => d.value ?? 0)
-      .sort((a, b) => (b.value ?? 0) - (a.value ?? 0))
-
-    const layout = treemap<typeof root.data>()
-      .size([W, H])
-      .tile(treemapSquarify.ratio(1.3))
-      .paddingInner(3)
-      .round(true)
-
-    layout(root)
-    return (root.leaves() as Array<typeof root & { x0: number; y0: number; x1: number; y1: number; data: { key: CategoryGroupKey; value: number } }>)
-      .map(leaf => ({
-        key: leaf.data.key,
-        count: leaf.value ?? 0,
-        x: leaf.x0,
-        y: leaf.y0,
-        w: leaf.x1 - leaf.x0,
-        h: leaf.y1 - leaf.y0,
-      }))
-  }, [frame, data.groupOrder])
+  const tiles: TileNode[] = useMemo(() => layoutTreemap(frame, data.groupOrder), [frame, data.groupOrder])
 
   // Auto-play stepping
   useEffect(() => {
@@ -251,31 +203,7 @@ export function CategoryTreemap({ data }: Props) {
           const percent = (tile.count / frame.total) * 100
           const groupLabel = t(`groups.${tile.key}` as never)
           const glyph = frame.samples[tile.key]?.[0] ?? ''
-          const hasText = tile.w >= 96 && tile.h >= 64
-          // Approx label width: CJK glyphs are ~1em wide, Latin uppercase
-          // bold + tracking averages ~0.95em per char. We use this to hide
-          // the label (keeping just the count) when the tile is so narrow
-          // the label would overflow horizontally.
-          const isCJK = /[一-鿿]/.test(groupLabel)
-          const labelEstWidth = isCJK
-            ? groupLabel.length * 11
-            : groupLabel.length * 9.5
-          const canShowLabel = hasText && tile.w >= labelEstWidth + 16
-          // Three layout tiers:
-          //   - Wide (>= 200px AND label fits): single row, label left + count right
-          //   - Narrow but label fits: stack label-on-top, count-below
-          //   - Label can't fit: just count, centered
-          const isWide = tile.w >= 200 && canShowLabel
-          const isStacked = canShowLabel && !isWide
-          const textBandH = !hasText ? 0 : isStacked ? 42 : 32
-          // Emoji "stage" — the area above the text band that holds the glyph
-          const stageH = Math.max(0, tile.h - textBandH)
-          const stageCy = tile.y + stageH / 2 + (hasText ? -2 : 0)
-          // Single hero glyph, auto-sized to whichever axis is tightest.
-          const emojiSize = Math.max(
-            18,
-            Math.min(96, Math.floor(Math.min(stageH * 0.78, tile.w - 24))),
-          )
+          const L = tileTextLayout(tile, groupLabel)
           return (
             <motion.g
               key={tile.key}
@@ -316,11 +244,11 @@ export function CategoryTreemap({ data }: Props) {
               {/* Single hero emoji */}
               {glyph && (
                 <motion.text
-                  animate={{ x: tile.x + tile.w / 2, y: stageCy }}
+                  animate={{ x: tile.x + tile.w / 2, y: L.stageCy }}
                   transition={{ duration: reduced ? 0 : ANIM_MS / 1000, ease: 'easeInOut' }}
                   textAnchor="middle"
                   dominantBaseline="central"
-                  fontSize={emojiSize}
+                  fontSize={L.emojiSize}
                   pointerEvents="none"
                   aria-hidden="true"
                   style={{ fontVariantEmoji: 'emoji' }}
@@ -328,29 +256,26 @@ export function CategoryTreemap({ data }: Props) {
                   {glyph}
                 </motion.text>
               )}
-              {hasText && (
+              {L.hasText && (
                 <>
                   {/* Subtle dark scrim under the text band for legibility */}
                   <motion.rect
                     animate={{
                       x: tile.x,
-                      y: tile.y + tile.h - textBandH,
+                      y: tile.y + tile.h - L.textBandH,
                       width: tile.w,
-                      height: textBandH,
+                      height: L.textBandH,
                     }}
                     transition={{ duration: reduced ? 0 : ANIM_MS / 1000, ease: 'easeInOut' }}
                     fill="black"
                     opacity={0.08}
                     pointerEvents="none"
                   />
-                  {canShowLabel && (
+                  {L.canShowLabel && (
                     <motion.text
-                      animate={{
-                        x: isStacked ? tile.x + tile.w / 2 : tile.x + 12,
-                        y: tile.y + tile.h - (isStacked ? 26 : 11),
-                      }}
+                      animate={{ x: L.labelX, y: L.labelY }}
                       transition={{ duration: reduced ? 0 : ANIM_MS / 1000, ease: 'easeInOut' }}
-                      textAnchor={isStacked ? 'middle' : 'start'}
+                      textAnchor={L.labelAnchor}
                       fontSize="10"
                       fontWeight="800"
                       letterSpacing="0.06em"
@@ -362,14 +287,9 @@ export function CategoryTreemap({ data }: Props) {
                     </motion.text>
                   )}
                   <motion.text
-                    animate={{
-                      x: canShowLabel && isWide
-                        ? tile.x + tile.w - 12
-                        : tile.x + tile.w / 2,
-                      y: tile.y + tile.h - (isStacked ? 9 : 11),
-                    }}
+                    animate={{ x: L.countX, y: L.countY }}
                     transition={{ duration: reduced ? 0 : ANIM_MS / 1000, ease: 'easeInOut' }}
-                    textAnchor={canShowLabel && isWide ? 'end' : 'middle'}
+                    textAnchor={L.countAnchor}
                     fontSize="12"
                     fontWeight="900"
                     className="tabular"
