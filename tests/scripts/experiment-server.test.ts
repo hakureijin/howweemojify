@@ -3,7 +3,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
 import { mkdtempSync, mkdirSync, writeFileSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import type { AddressInfo } from 'node:net'
+import { connect, type AddressInfo } from 'node:net'
 import { createExperimentServer } from '../../scripts/experiment-server.mjs'
 
 let base = ''
@@ -34,6 +34,19 @@ afterAll(() => {
 beforeEach(() => { rmSync(logDir, { recursive: true, force: true }) })
 
 const post = (body: string) => fetch(`${base}/api/log`, { method: 'POST', body, headers: { 'content-type': 'application/json' } })
+/** Sends one raw HTTP/1.1 request line (bypassing fetch's URL normalisation) and
+ *  resolves with the status line, or '' if the connection closed without one. */
+const rawRequest = (target: string) =>
+  new Promise<string>(resolve => {
+    const { port } = server.address() as AddressInfo
+    const sock = connect(port, '127.0.0.1', () => {
+      sock.write(`GET ${target} HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n`)
+    })
+    let data = ''
+    sock.on('data', d => { data += d.toString() })
+    sock.on('close', () => resolve(data.split('\r\n')[0] ?? ''))
+    sock.on('error', () => resolve(''))
+  })
 const logLines = () => {
   let files: string[] = []
   try { files = readdirSync(logDir) } catch { return [] }
@@ -102,6 +115,12 @@ describe('experiment server', () => {
 
   it('answers malformed percent-encoding with 400 instead of crashing', async () => {
     expect((await fetch(`${base}/%E0%A4%A`)).status).toBe(400)
+    expect((await fetch(`${base}/api/health`)).status).toBe(200)
+  })
+
+  it.each(['//', '//[', '/\\'])('survives the unparsable request target %s', async target => {
+    const status = await rawRequest(target)
+    expect(status).toBe('HTTP/1.1 400 Bad Request')
     expect((await fetch(`${base}/api/health`)).status).toBe(200)
   })
 })

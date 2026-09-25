@@ -39,6 +39,7 @@ function send(res, status, body = '', headers = {}) {
 
 /** Reads the whole body; returns null if it exceeds `limit` bytes. Keeps
  *  draining past the limit so the response can still be written.
+ *  A slow or endless body is bounded by Node's default `requestTimeout` (300 s).
  *  @param {import('node:http').IncomingMessage} req
  *  @param {number} limit
  *  @returns {Promise<string | null>} */
@@ -134,17 +135,30 @@ async function serveStatic(req, res, root, url) {
 export function createExperimentServer({ root, logDir }) {
   const rootAbs = resolve(root)
   const logAbs = resolve(logDir)
+  /** @param {import('node:http').ServerResponse} res @param {unknown} err */
+  const fail = (res, err) => {
+    console.error('[experiment]', err)
+    if (!res.headersSent) send(res, 500, 'internal error')
+    else res.end()
+  }
+  // Nothing thrown here may escape the listener: an uncaught error would kill the
+  // whole server (and every participant's session) over one malformed request.
   return createServer((req, res) => {
-    const url = new URL(req.url ?? '/', 'http://localhost')
-    const work =
-      url.pathname === '/api/log' ? handleLog(req, res, logAbs)
-      : url.pathname === '/api/health' ? Promise.resolve(send(res, 200, 'ok'))
-      : serveStatic(req, res, rootAbs, url)
-    work.catch(err => {
-      console.error('[experiment]', err)
-      if (!res.headersSent) send(res, 500, 'internal error')
-      else res.end()
-    })
+    try {
+      let url
+      try {
+        url = new URL(req.url ?? '/', 'http://localhost')
+      } catch {
+        return send(res, 400, 'bad request') // e.g. `GET //` or `GET /\`
+      }
+      const work =
+        url.pathname === '/api/log' ? handleLog(req, res, logAbs)
+        : url.pathname === '/api/health' ? Promise.resolve(send(res, 200, 'ok'))
+        : serveStatic(req, res, rootAbs, url)
+      work.catch(err => fail(res, err))
+    } catch (err) {
+      fail(res, err)
+    }
   })
 }
 
