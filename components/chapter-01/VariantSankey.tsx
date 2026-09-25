@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useLocale, useTranslations } from 'next-intl'
 import { Citation } from '@/components/ui/Citation'
+import { ChartHeader } from '@/components/chapter-01/ChartHeader'
+import { SankeyNodeVisual } from '@/components/chapter-01/SankeyNodeVisual'
 import { usePrefersReducedMotion } from '@/lib/prefers-reduced-motion'
 import type {
   CategoryGroupKey,
@@ -159,30 +161,17 @@ export function VariantSankey({ data }: Props) {
   return (
     <div className="relative" ref={containerRef}>
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-3">
-        <div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[color:var(--muted)]">
-            {t('eyebrow')}
-          </div>
-          <div className="text-base md:text-lg font-semibold mt-1 text-[color:var(--ink)]">
-            {t('title')}
-          </div>
-          <div className="text-[11px] text-[color:var(--muted)] mt-1 max-w-2xl">
-            {t('subtitle', {
-              version: data.snapshot.versionLabel,
-              total: data.snapshot.total.toLocaleString(locale),
-            })}
-          </div>
-        </div>
-        <div className="flex items-baseline gap-2">
-          <div className="display-tight text-3xl md:text-4xl font-semibold tabular text-[color:var(--accent-01)] leading-none">
-            {data.snapshot.total.toLocaleString(locale)}
-          </div>
-          <div className="text-[11px] text-[color:var(--muted)] font-bold uppercase tracking-wider">
-            {data.snapshot.versionLabel}
-          </div>
-        </div>
-      </div>
+      <ChartHeader
+        eyebrow={t('eyebrow')}
+        title={t('title')}
+        subtitle={t('subtitle', {
+          version: data.snapshot.versionLabel,
+          total: data.snapshot.total.toLocaleString(locale),
+        })}
+        subtitleClassName="max-w-2xl"
+        total={data.snapshot.total.toLocaleString(locale)}
+        totalLabel={data.snapshot.versionLabel}
+      />
 
       <svg
         viewBox={`0 0 ${W} ${H}`}
@@ -281,12 +270,6 @@ export function VariantSankey({ data }: Props) {
           {layout.nodes.map((n: LaidNode) => {
             const isActive = visibleId === n.id
             const visible = isNodeVisible(n)
-            const accentVar =
-              n.kind === 'mechanism' ? `--mech-${n.refId}` : `--cat-${n.refId}`
-            const labelX = n.kind === 'mechanism' ? n.x1 + 8 : n.x0 - 8
-            const labelAnchor = n.kind === 'mechanism' ? 'start' : 'end'
-            const labelY = (n.y0 + n.y1) / 2
-            const nodeHeight = n.y1 - n.y0
             return (
               <g
                 key={n.id}
@@ -321,39 +304,13 @@ export function VariantSankey({ data }: Props) {
                   height={n.y1 - n.y0 + 8}
                   fill="transparent"
                 />
-                <rect
-                  x={n.x0}
-                  y={n.y0}
-                  width={n.x1 - n.x0}
-                  height={Math.max(nodeHeight, 1)}
-                  rx={3}
-                  fill={`var(${accentVar})`}
-                  opacity={visible ? (isActive ? 1 : 0.92) : 0.25}
-                  stroke={isActive ? 'var(--ink)' : 'none'}
-                  strokeWidth={isActive ? 1.5 : 0}
+                <SankeyNodeVisual
+                  n={n}
+                  locale={locale}
+                  rectOpacity={visible ? (isActive ? 1 : 0.92) : 0.25}
+                  labelOpacity={visible ? 1 : 0.35}
+                  active={isActive}
                 />
-                <text
-                  x={labelX}
-                  y={labelY}
-                  textAnchor={labelAnchor}
-                  dominantBaseline="central"
-                  fontSize="11"
-                  fontWeight="800"
-                  fill="var(--ink)"
-                  opacity={visible ? 1 : 0.35}
-                  pointerEvents="none"
-                  className="tabular"
-                >
-                  {n.label}
-                  <tspan
-                    fontSize="10"
-                    fontWeight="700"
-                    fill="var(--muted)"
-                    dx="6"
-                  >
-                    {n.total.toLocaleString(locale)}
-                  </tspan>
-                </text>
               </g>
             )
           })}

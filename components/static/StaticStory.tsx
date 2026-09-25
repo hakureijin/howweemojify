@@ -2,6 +2,7 @@ import { StaticHero } from './StaticHero'
 import { StaticSection } from './StaticSection'
 import { StaticCumulative } from './StaticCumulative'
 import { StaticTreemap } from './StaticTreemap'
+import { StaticSankey } from './StaticSankey'
 import { StaticWhoGetsIn } from './StaticWhoGetsIn'
 import type { Chapter01Data, Chapter01CategoryData, Chapter01VariantData } from '@/types/chapter-01'
 import type { Chapter02Data } from '@/types/chapter-02'
@@ -14,7 +15,7 @@ interface Props {
 }
 
 /** Everything between the nav and the footer on /[locale]/static. */
-export function StaticStory({ ch01, ch01Cat, ch02 }: Props) {
+export function StaticStory({ ch01, ch01Cat, ch01Var, ch02 }: Props) {
   return (
     <>
       <StaticHero />
@@ -25,6 +26,11 @@ export function StaticStory({ ch01, ch01Cat, ch02 }: Props) {
         <div data-track-section="ch01-treemap" className="max-w-6xl mx-auto px-6 pt-2 pb-8 border-t border-[color:var(--line)]/40">
           <div className="pt-8">
             <StaticTreemap data={ch01Cat} />
+          </div>
+        </div>
+        <div data-track-section="ch01-sankey" className="max-w-6xl mx-auto px-6 pt-2 pb-16 border-t border-[color:var(--line)]/40">
+          <div className="pt-8">
+            <StaticSankey data={ch01Var} />
           </div>
         </div>
       </StaticSection>
