@@ -129,3 +129,10 @@ body {
   z-index: 20;
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.18));
 }
+
+/* Static-page twin of .hero-emoji-btn: same box and metrics, nothing to press. */
+.hero-emoji-static {
+  display: block;
+  line-height: 1;
+  user-select: none;
+}

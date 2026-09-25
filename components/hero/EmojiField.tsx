@@ -4,18 +4,12 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { gsap } from 'gsap'
 import { useGSAP } from '@gsap/react'
 import { HERO_EMOJIS } from '@/lib/hero-emoji-timeline'
-import { computeLayout, type LayoutProfile } from '@/lib/hero-emoji-layout'
+import { computeLayout, pickProfile } from '@/lib/hero-emoji-layout'
 import { usePrefersReducedMotion } from '@/lib/prefers-reduced-motion'
 
 type Props = {
   labelEnlarge: string  // i18n template containing __CHAR__ placeholder
   labelShrink: string   // i18n template containing __CHAR__ placeholder
-}
-
-function pickProfile(vw: number, vh: number): LayoutProfile {
-  if (vh < 480) return 'short'
-  if (vw < 768) return 'mobile'
-  return 'desktop'
 }
 
 export function EmojiField({ labelEnlarge, labelShrink }: Props) {

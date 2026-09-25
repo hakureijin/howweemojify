@@ -27,6 +27,12 @@ const PROFILES: Record<LayoutProfile, Profile> = {
   short:   { cols: 16, rows: 8,  rx: 220, ry: 90,  baseSize: 18, sizeJitter: 6 },
 }
 
+export function pickProfile(vw: number, vh: number): LayoutProfile {
+  if (vh < 480) return 'short'
+  if (vw < 768) return 'mobile'
+  return 'desktop'
+}
+
 // Deterministic PRNG so SSR and CSR produce identical positions.
 function mulberry32(seed: number): () => number {
   let state = seed >>> 0

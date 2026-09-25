@@ -318,5 +318,54 @@
   "footer": {
     "heading": "References",
     "credits": "Every quantitative claim on this page carries a public, citable source."
+  },
+  "static": {
+    "cumulative": {
+      "note": "Numbers beside the medallions match the table below. Larger medallions mark decade milestones; dashed medallions are draft versions.",
+      "insetTitle": "Zoomed view · 2015 → today",
+      "tableCaption": "Every version",
+      "colNo": "#",
+      "colVersion": "Year · version",
+      "colSamples": "Highlights",
+      "colNarrative": "Notes",
+      "colSource": "Source"
+    },
+    "treemap": {
+      "subtitle": "How the 9 emoji categories take share of the growing catalogue, 2010 → today, version by version.",
+      "smallMultiplesTitle": "Composition by version",
+      "tableCaption": "Count and share per category and version",
+      "colGroup": "Category",
+      "colSamples": "Samples (versions)",
+      "runRange": "{from} – {to}"
+    },
+    "sankey": {
+      "subtitle": "In {version} we count {total} fully-qualified emoji. Each flow tags one mechanism that grows the total and traces it into the nine CLDR groups.",
+      "nodeTableCaption": "Nodes",
+      "flowTableCaption": "Flows",
+      "colKind": "Kind",
+      "colNode": "Node",
+      "colFlow": "Flow",
+      "colShareOfMech": "Of mechanism",
+      "colExamples": "Examples",
+      "kindMechanism": "Mechanism",
+      "kindGroup": "Category"
+    },
+    "map": {
+      "note": "Numbers beside the pins match the table below.",
+      "insetsTitle": "Close-ups",
+      "insets": {
+        "europe-mideast": "Europe · Middle East",
+        "east-asia": "East Asia",
+        "south-asia": "South Asia",
+        "mexico": "Mexico"
+      },
+      "insetCount": "{count} origins",
+      "tableCaption": "All cultural origins",
+      "colNo": "#",
+      "colEmoji": "Emoji",
+      "colCountry": "Country / region",
+      "colYear": "Year",
+      "colOrigin": "Origin"
+    }
   }
 }

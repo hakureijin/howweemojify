@@ -318,5 +318,54 @@
   "footer": {
     "heading": "References",
     "credits": "本页所有定量数据均附公开可追溯来源。"
+  },
+  "static": {
+    "cumulative": {
+      "note": "徽章旁的数字对应下表编号。徽章变大的是十年节点，虚线徽章为草案版本。",
+      "insetTitle": "放大视图 · 2015 → 至今",
+      "tableCaption": "各版本明细",
+      "colNo": "#",
+      "colVersion": "年份 · 版本",
+      "colSamples": "代表 emoji",
+      "colNarrative": "说明",
+      "colSource": "来源"
+    },
+    "treemap": {
+      "subtitle": "2010 → 至今 emoji 总量在 9 大类别间的占比变化，按版本依次排列。",
+      "smallMultiplesTitle": "逐版本构成",
+      "tableCaption": "各版本各类别数量与占比",
+      "colGroup": "类别",
+      "colSamples": "代表 emoji（适用版本）",
+      "runRange": "{from} – {to}"
+    },
+    "sankey": {
+      "subtitle": "在 {version} 的 {total} 个全限定 emoji 中，每条流向都标注了一种「让总量膨胀」的机制——把它流入九大类别里。",
+      "nodeTableCaption": "节点明细",
+      "flowTableCaption": "流向明细",
+      "colKind": "类型",
+      "colNode": "节点",
+      "colFlow": "流向",
+      "colShareOfMech": "占该机制",
+      "colExamples": "示例",
+      "kindMechanism": "变体机制",
+      "kindGroup": "类别归属"
+    },
+    "map": {
+      "note": "图钉旁的数字对应下表编号。",
+      "insetsTitle": "局部放大",
+      "insets": {
+        "europe-mideast": "欧洲 · 中东",
+        "east-asia": "东亚",
+        "south-asia": "南亚",
+        "mexico": "墨西哥"
+      },
+      "insetCount": "{count} 个原点",
+      "tableCaption": "全部文化原点",
+      "colNo": "#",
+      "colEmoji": "Emoji",
+      "colCountry": "国家/地区",
+      "colYear": "年份",
+      "colOrigin": "来源说明"
+    }
   }
 }

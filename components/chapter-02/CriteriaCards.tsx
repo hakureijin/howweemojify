@@ -8,7 +8,7 @@ const TONE: Record<Criterion['tone'], { tagKey: string; color: string }> = {
   reject: { tagKey: 'ch02.criteria.tone.reject', color: 'var(--signal-reject)' },
 }
 
-export function CriteriaCards({ criteria }: { criteria: Criterion[] }) {
+export function CriteriaCards({ criteria, isStatic = false }: { criteria: Criterion[]; isStatic?: boolean }) {
   const t = useTranslations()
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
@@ -17,7 +17,7 @@ export function CriteriaCards({ criteria }: { criteria: Criterion[] }) {
         return (
           <article
             key={c.id}
-            className="bg-white rounded-2xl p-6 card-elev transition-transform duration-200 hover:-translate-y-0.5"
+            className={`bg-white rounded-2xl p-6 card-elev ${isStatic ? '' : 'transition-transform duration-200 hover:-translate-y-0.5'}`}
           >
             <div
               className="text-[10px] font-semibold uppercase tracking-[0.15em]"

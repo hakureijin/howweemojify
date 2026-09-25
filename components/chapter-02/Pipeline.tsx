@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { useTranslations } from 'next-intl'
 import type { PipelineStep } from '@/types/chapter-02'
 
-export function Pipeline({ steps }: { steps: PipelineStep[] }) {
+export function Pipeline({ steps, isStatic = false }: { steps: PipelineStep[]; isStatic?: boolean }) {
   const t = useTranslations()
   return (
     <div className="bg-white rounded-2xl p-6 card-elev">
@@ -12,10 +12,12 @@ export function Pipeline({ steps }: { steps: PipelineStep[] }) {
         {steps.map((s, i) => (
           <Fragment key={s.id}>
             <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.08 }}
+              {...(isStatic ? {} : {
+                initial: { opacity: 0, y: 8 },
+                whileInView: { opacity: 1, y: 0 },
+                viewport: { once: true },
+                transition: { delay: i * 0.08 },
+              })}
               className="flex-1 text-center"
             >
               <div className="mx-auto w-9 h-9 rounded-full bg-[color:var(--accent-02)] text-white flex items-center justify-center font-semibold text-sm">
@@ -26,10 +28,12 @@ export function Pipeline({ steps }: { steps: PipelineStep[] }) {
             </motion.div>
             {i < steps.length - 1 && (
               <motion.div
-                initial={{ scaleX: 0 }}
-                whileInView={{ scaleX: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.08 + 0.04 }}
+                {...(isStatic ? {} : {
+                  initial: { scaleX: 0 },
+                  whileInView: { scaleX: 1 },
+                  viewport: { once: true },
+                  transition: { delay: i * 0.08 + 0.04 },
+                })}
                 className="h-0.5 w-6 mt-5 bg-[color:var(--accent-02)] origin-left"
               />
             )}
