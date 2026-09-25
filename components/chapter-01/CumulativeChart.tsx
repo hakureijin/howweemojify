@@ -1,93 +1,22 @@
 'use client'
-import { useMemo, useState, useEffect, useRef, useCallback, useId } from 'react'
-import { scaleLinear } from 'd3-scale'
-import { line, area, curveMonotoneX } from 'd3-shape'
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Citation } from '@/components/ui/Citation'
-import type { Chapter01Data, TimelineNode } from '@/types/chapter-01'
+import { CumulativeAxes } from './CumulativeAxes'
+import { CumulativeMarker } from './CumulativeMarker'
+import { VersionDiffCard } from './VersionDiffCard'
+import {
+  buildGeometry, buildSeries, computeVersionDiff,
+  CUM_W as W, CUM_H as H, DEFAULT_FROM_ID, DEFAULT_TO_ID, RANGE_START,
+  type RangeId,
+} from '@/lib/charts/cumulative'
+import type { Chapter01Data } from '@/types/chapter-01'
 
-const W = 880
-const H = 440
-const PAD = { l: 64, r: 24, t: 32, b: 48 }
+// Re-exported for tests/logic/version-diff.test.ts, which imports from this file.
+export { computeVersionDiff, DEFAULT_FROM_ID, DEFAULT_TO_ID }
+export type { EnrichedNode, DiffResult } from '@/lib/charts/cumulative'
+
 const HIT_RADIUS = 22 // 44px touch target diameter
-
-// The 1999–2010 stretch only has 2 contributing versions (DoCoMo, Unicode 6.0); a
-// linear x-axis gives it ~41% of the chart width and crams every Unicode/Emoji
-// version from 2014 onward into the remainder. When the visible range includes
-// the pre-2010 segment, we compress it to COMPRESS_PRE_WEIGHT of the width so the
-// dense high-growth era can breathe.
-const COMPRESS_BREAK_YEAR = 2010
-const COMPRESS_PRE_WEIGHT = 0.22
-
-type RangeId = 'all' | 'since-2015' | 'since-2020'
-
-const RANGE_START: Record<RangeId, number> = {
-  'all': 1999,
-  'since-2015': 2015,
-  'since-2020': 2020,
-}
-
-export const DEFAULT_FROM_ID = 'emoji-6-0'
-export const DEFAULT_TO_ID = 'emoji-17-0'
-
-export interface EnrichedNode {
-  node: TimelineNode & { newEmojiCount: number }
-  runningTotal: number
-  previousTotal: number
-  growthPct: number
-}
-
-export interface DiffResult {
-  fromNode: EnrichedNode
-  toNode: EnrichedNode
-  yearSpan: number
-  versionCount: number
-  addedTotal: number
-  growthPct: number | null
-  sampleEmojis: string[]
-  isDraft: boolean
-}
-
-export function computeVersionDiff(
-  contributingSeries: EnrichedNode[],
-  fromId: string,
-  toId: string,
-): DiffResult | null {
-  if (fromId === toId) return null
-  const idxA = contributingSeries.findIndex((n) => n.node.id === fromId)
-  const idxB = contributingSeries.findIndex((n) => n.node.id === toId)
-  if (idxA === -1 || idxB === -1) return null
-
-  const [earlyIdx, lateIdx] = idxA < idxB ? [idxA, idxB] : [idxB, idxA]
-  const fromNode = contributingSeries[earlyIdx]
-  const toNode = contributingSeries[lateIdx]
-
-  const intermediate = contributingSeries.slice(earlyIdx + 1, lateIdx + 1)
-  const addedTotal = intermediate.reduce((acc, n) => acc + n.node.newEmojiCount, 0)
-  const growthPct =
-    fromNode.runningTotal === 0 ? null : (addedTotal / fromNode.runningTotal) * 100
-  const sampleEmojis = intermediate.flatMap((n) => n.node.highlightEmojis)
-
-  return {
-    fromNode,
-    toNode,
-    yearSpan: toNode.node.year - fromNode.node.year,
-    versionCount: intermediate.length,
-    addedTotal,
-    growthPct,
-    sampleEmojis,
-    isDraft: toNode.node.draft === true,
-  }
-}
-
-interface ChartPoint extends TimelineNode {
-  runningTotal: number
-  previousTotal: number
-  growthPct: number
-  flagship: boolean
-  cx: number
-  cy: number
-}
 
 interface Props {
   data: Chapter01Data
@@ -98,7 +27,6 @@ export function CumulativeChart({ data }: Props) {
   const narrativeT = useTranslations()
   const locale = useLocale() as 'zh' | 'en'
   const containerRef = useRef<HTMLDivElement>(null)
-  const clipId = useId()
 
   const [range, setRange] = useState<RangeId>('all')
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -106,21 +34,8 @@ export function CumulativeChart({ data }: Props) {
   const [fromId, setFromId] = useState<string>(DEFAULT_FROM_ID)
   const [toId, setToId] = useState<string>(DEFAULT_TO_ID)
 
-  const decadeSet = useMemo(() => new Set(data.decadeIndex), [data.decadeIndex])
-
   // 1. Compute the full enriched series (every contributing version)
-  const fullSeries = useMemo(() => {
-    const contributing = data.timeline.filter(
-      (n): n is TimelineNode & { newEmojiCount: number } => n.newEmojiCount !== null
-    )
-    let running = 0
-    return contributing.map(n => {
-      const previousTotal = running
-      running += n.newEmojiCount
-      const growthPct = previousTotal === 0 ? 0 : (n.newEmojiCount / previousTotal) * 100
-      return { node: n, runningTotal: running, previousTotal, growthPct }
-    })
-  }, [data.timeline])
+  const fullSeries = useMemo(() => buildSeries(data.timeline), [data.timeline])
 
   const rangeStart = RANGE_START[range]
   const fullMaxYear = useMemo(() => Math.max(...fullSeries.map(d => d.node.year)), [fullSeries])
@@ -137,90 +52,11 @@ export function CumulativeChart({ data }: Props) {
   }, [diffResult])
 
   // 2. Build scales and paths
-  const { points, hiddenAnchor, pathLine, pathArea, yTicks, xScale, yScale, xLabels } = useMemo(() => {
-    const chartLeft = PAD.l
-    const chartRight = W - PAD.r
-    const chartWidth = chartRight - chartLeft
-    const compressed = rangeStart < COMPRESS_BREAK_YEAR
-
-    let xScale: (year: number) => number
-    if (compressed) {
-      const breakX = chartLeft + chartWidth * COMPRESS_PRE_WEIGHT
-      const leftScale = scaleLinear()
-        .domain([rangeStart, COMPRESS_BREAK_YEAR])
-        .range([chartLeft, breakX])
-      const rightScale = scaleLinear()
-        .domain([COMPRESS_BREAK_YEAR, Math.max(fullMaxYear, COMPRESS_BREAK_YEAR + 1)])
-        .range([breakX, chartRight])
-      xScale = (year: number) =>
-        year <= COMPRESS_BREAK_YEAR ? leftScale(year) : rightScale(year)
-    } else {
-      const linear = scaleLinear()
-        .domain([rangeStart, Math.max(fullMaxYear, rangeStart + 1)])
-        .range([chartLeft, chartRight])
-      xScale = (year: number) => linear(year)
-    }
-
-    const yMax = Math.max(...fullSeries.map(d => d.runningTotal), 1) * 1.06
-    const yScale = scaleLinear().domain([0, yMax]).nice().range([H - PAD.b, PAD.t])
-
-    // Visible points (interactive markers)
-    const visible: ChartPoint[] = fullSeries
-      .filter(d => d.node.year >= rangeStart)
-      .map(d => ({
-        ...d.node,
-        runningTotal: d.runningTotal,
-        previousTotal: d.previousTotal,
-        growthPct: d.growthPct,
-        flagship: decadeSet.has(d.node.year),
-        cx: xScale(d.node.year),
-        cy: yScale(d.runningTotal),
-      }))
-
-    // Predecessor anchor: the last point BEFORE the visible range — used so the line/area
-    // visually "enters from the left" instead of starting with a triangle wedge.
-    const predecessor = fullSeries
-      .filter(d => d.node.year < rangeStart)
-      .slice(-1)[0]
-    const anchor: ChartPoint | null = predecessor
-      ? {
-          ...predecessor.node,
-          runningTotal: predecessor.runningTotal,
-          previousTotal: predecessor.previousTotal,
-          growthPct: predecessor.growthPct,
-          flagship: decadeSet.has(predecessor.node.year),
-          cx: xScale(predecessor.node.year), // will be < PAD.l → off-screen, clipped
-          cy: yScale(predecessor.runningTotal),
-        }
-      : null
-
-    const pathPoints = anchor ? [anchor, ...visible] : visible
-    const seriesPts = pathPoints.map(p => ({ year: p.year, total: p.runningTotal }))
-    const l = line<{ year: number; total: number }>()
-      .x(d => xScale(d.year))
-      .y(d => yScale(d.total))
-      .curve(curveMonotoneX)
-    const a = area<{ year: number; total: number }>()
-      .x(d => xScale(d.year))
-      .y0(yScale(0))
-      .y1(d => yScale(d.total))
-      .curve(curveMonotoneX)
-
-    const xLabels = Array.from(new Set([rangeStart, ...data.decadeIndex.filter(y => y >= rangeStart), fullMaxYear]))
-      .filter(y => y >= rangeStart)
-      .sort((a, b) => a - b)
-
-    return {
-      points: visible,
-      hiddenAnchor: anchor,
-      pathLine: l(seriesPts) || '',
-      pathArea: a(seriesPts) || '',
-      yTicks: yScale.ticks(4),
-      xScale,
-      yScale,
-      xLabels,
-    }
-  }, [fullSeries, fullMaxYear, rangeStart, decadeSet, data.decadeIndex])
+  const geometry = useMemo(
+    () => buildGeometry(fullSeries, data.decadeIndex, rangeStart),
+    [fullSeries, data.decadeIndex, rangeStart],
+  )
+  const { points } = geometry
 
   const visibleId = pinnedId ?? activeId
   const activePoint = points.find(p => p.id === visibleId) ?? null
@@ -312,102 +148,6 @@ export function CumulativeChart({ data }: Props) {
     )
   }
 
-  function VersionDiffCard() {
-    if (!diffResult) return null
-
-    const MAX_SAMPLES = 30
-    const samples = diffResult.sampleEmojis
-    const visibleSamples = samples.slice(0, MAX_SAMPLES)
-    const overflow = Math.max(0, samples.length - MAX_SAMPLES)
-
-    const spanText =
-      diffResult.yearSpan === 0
-        ? t('diff.cardSpanSameYear', { versions: diffResult.versionCount })
-        : t('diff.cardSpan', {
-            years: diffResult.yearSpan,
-            versions: diffResult.versionCount,
-          })
-
-    return (
-      <div className="mt-3 rounded-xl bg-white p-3.5 border border-[color:var(--accent-01)]/25">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <div className="text-[10px] font-semibold tracking-wider text-[color:var(--accent-01)] uppercase">
-              {t('diff.cardEyebrow', {
-                fromYear: diffResult.fromNode.node.year,
-                toYear: diffResult.toNode.node.year,
-              })}
-            </div>
-            <div className="mt-0.5 text-sm font-semibold text-[color:var(--ink)]">
-              {t('diff.cardTitle', {
-                fromVersion: diffResult.fromNode.node.versionLabel,
-                toVersion: diffResult.toNode.node.versionLabel,
-              })}
-              <span className="ml-2 text-[11px] font-bold text-[color:var(--muted)]">
-                · {spanText}
-              </span>
-            </div>
-          </div>
-          {diffResult.isDraft && (
-            <span className="text-[9px] font-semibold tracking-wider px-1.5 py-0.5 rounded bg-[color:var(--muted)] text-white">
-              {t('draftBadge')}
-            </span>
-          )}
-        </div>
-
-        <div
-          className="mt-3 grid grid-cols-3 gap-3 text-xs border-t border-[color:var(--line)]/60 pt-3"
-          aria-live="polite"
-        >
-          <div>
-            <div className="text-[9px] uppercase tracking-wide text-[color:var(--muted)] font-bold">
-              {t('added')}
-            </div>
-            <div className="text-base font-semibold tabular text-[color:var(--accent-01)] leading-tight">
-              +{diffResult.addedTotal.toLocaleString(locale)}
-            </div>
-          </div>
-          <div>
-            <div className="text-[9px] uppercase tracking-wide text-[color:var(--muted)] font-bold">
-              {t('total')}
-            </div>
-            <div className="text-base font-semibold tabular leading-tight">
-              {diffResult.toNode.runningTotal.toLocaleString(locale)}
-            </div>
-          </div>
-          <div>
-            <div className="text-[9px] uppercase tracking-wide text-[color:var(--muted)] font-bold">
-              {t('growth')}
-            </div>
-            <div className="text-base font-semibold tabular text-[color:var(--accent-04)] leading-tight">
-              {diffResult.growthPct === null
-                ? '—'
-                : `+${Math.round(diffResult.growthPct)}%`}
-            </div>
-          </div>
-        </div>
-
-        {visibleSamples.length > 0 && (
-          <div className="mt-3 border-t border-[color:var(--line)]/60 pt-3">
-            <div className="text-[9px] uppercase tracking-wide text-[color:var(--muted)] font-bold mb-1.5">
-              {t('diff.sampleHeader', { versions: diffResult.versionCount })}
-            </div>
-            <div className="flex flex-wrap gap-1.5 text-base md:text-lg leading-none">
-              {visibleSamples.map((e, i) => (
-                <span key={i}>{e}</span>
-              ))}
-              {overflow > 0 && (
-                <span className="text-[11px] font-bold text-[color:var(--muted)] self-end">
-                  {t('diff.moreCount', { count: overflow })}
-                </span>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    )
-  }
-
   return (
     <div className="relative" ref={containerRef}>
       {/* Title row + headline total */}
@@ -463,107 +203,16 @@ export function CumulativeChart({ data }: Props) {
         aria-label={t('ariaLabel', { count: points.length })}
       >
         <defs>
-          <linearGradient id="gradGrowth" x1="0" x2="1">
-            <stop offset="0%" stopColor="var(--accent-01)" />
-            <stop offset="100%" stopColor="var(--accent-04)" />
-          </linearGradient>
           <filter id="markerShadow" x="-50%" y="-50%" width="200%" height="200%">
             <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="rgba(0,0,0,0.18)" />
           </filter>
-          <clipPath id={clipId}>
-            <rect
-              x={PAD.l}
-              y={PAD.t - 10}
-              width={W - PAD.l - PAD.r}
-              height={H - PAD.t - PAD.b + 12}
-            />
-          </clipPath>
         </defs>
 
-        {/* Y-axis title (rotated) */}
-        <text
-          x={16}
-          y={(PAD.t + (H - PAD.b)) / 2}
-          fontSize="10"
-          fill="var(--muted)"
-          textAnchor="middle"
-          fontWeight="800"
-          letterSpacing="0.1em"
-          transform={`rotate(-90 16 ${(PAD.t + (H - PAD.b)) / 2})`}
-        >
-          {t('yAxis')}
-        </text>
-
-        {/* Y-axis gridlines + labels */}
-        {yTicks.map(tick => (
-          <g key={tick}>
-            <line
-              x1={PAD.l}
-              x2={W - PAD.r}
-              y1={yScale(tick)}
-              y2={yScale(tick)}
-              stroke="var(--line)"
-              strokeDasharray="2 4"
-            />
-            <text
-              x={PAD.l - 10}
-              y={yScale(tick)}
-              textAnchor="end"
-              dominantBaseline="central"
-              fontSize="11"
-              fill="var(--muted)"
-              className="tabular"
-            >
-              {tick.toLocaleString(locale)}
-            </text>
-          </g>
-        ))}
-
-        {/* Area + line (clipped to chart area so off-screen extension doesn't leak) */}
-        <g clipPath={`url(#${clipId})`}>
-          <path d={pathArea} fill="url(#gradGrowth)" opacity={0.16} />
-          <path
-            d={pathLine}
-            fill="none"
-            stroke="url(#gradGrowth)"
-            strokeWidth={3}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </g>
-
-        {/* X-axis labels (decade markers within visible range) */}
-        {xLabels.map(year => (
-          <g key={year}>
-            <line
-              x1={xScale(year)}
-              x2={xScale(year)}
-              y1={H - PAD.b}
-              y2={H - PAD.b + 5}
-              stroke="var(--muted)"
-              opacity={0.4}
-            />
-            <text
-              x={xScale(year)}
-              y={H - PAD.b + 20}
-              fontSize="11"
-              fill="var(--muted)"
-              textAnchor="middle"
-              className="tabular"
-              fontWeight="700"
-            >
-              {year}
-            </text>
-          </g>
-        ))}
+        <CumulativeAxes geometry={geometry} locale={locale} yAxisLabel={t('yAxis')} />
 
         {/* Interactive emoji medallions (visible range only) */}
         {points.map(p => {
           const isActive = p.id === visibleId
-          const baseR = p.flagship ? 18 : 13
-          const r = isActive ? baseR + 4 : baseR
-          const fontSize = p.flagship ? (isActive ? 18 : 14) : isActive ? 14 : 11
-          const isDraft = p.draft === true
           return (
             <g
               key={p.id}
@@ -598,116 +247,18 @@ export function CumulativeChart({ data }: Props) {
             >
               {/* Invisible hit area */}
               <circle cx={p.cx} cy={p.cy} r={HIT_RADIUS} fill="transparent" />
-              {/* Medallion background */}
-              <circle
-                cx={p.cx}
-                cy={p.cy}
-                r={r}
-                fill="white"
-                stroke={isDraft ? 'var(--muted)' : 'var(--accent-01)'}
-                strokeWidth={isActive ? 3 : p.flagship ? 2.5 : 2}
-                strokeDasharray={isDraft ? '3 3' : undefined}
-                filter={isActive ? 'url(#markerShadow)' : undefined}
-                style={{ transition: 'r 160ms ease, stroke-width 160ms ease' }}
+              <CumulativeMarker
+                p={p}
+                isActive={isActive}
+                compare={compareIds.has(p.id) && diffResult ? (p.id === diffResult.fromNode.node.id ? 'A' : 'B') : null}
               />
-              {/* Highlight emoji */}
-              <text
-                x={p.cx}
-                y={p.cy}
-                textAnchor="middle"
-                dominantBaseline="central"
-                fontSize={fontSize}
-                pointerEvents="none"
-                opacity={isDraft ? 0.65 : 1}
-                style={{ transition: 'font-size 160ms ease' }}
-              >
-                {p.highlightEmojis[0] ?? '·'}
-              </text>
-              {/* Year label below flagship markers */}
-              {p.flagship && !isActive && !compareIds.has(p.id) && (
-                <text
-                  x={p.cx}
-                  y={p.cy + baseR + 12}
-                  textAnchor="middle"
-                  fontSize="9"
-                  fontWeight="800"
-                  fill={isDraft ? 'var(--muted)' : 'var(--accent-01)'}
-                  className="tabular"
-                  pointerEvents="none"
-                >
-                  {p.year}
-                </text>
-              )}
-              {/* Draft badge — sits on the LEFT of the medallion since the draft
-                  point is always at the chart's right edge. dominantBaseline
-                  "central" centers the glyphs vertically inside the pill instead
-                  of pinning the baseline (which makes the caps poke out the top). */}
-              {isDraft && (() => {
-                const pillW = 44
-                const pillH = 14
-                const pillX = p.cx - baseR - pillW
-                const pillY = p.cy - baseR - pillH / 2 - 2
-                return (
-                  <g pointerEvents="none">
-                    <rect
-                      x={pillX}
-                      y={pillY}
-                      width={pillW}
-                      height={pillH}
-                      rx={pillH / 2}
-                      fill="var(--muted)"
-                    />
-                    <text
-                      x={pillX + pillW / 2}
-                      y={pillY + pillH / 2}
-                      textAnchor="middle"
-                      dominantBaseline="central"
-                      fontSize="8"
-                      fontWeight="900"
-                      fill="white"
-                      letterSpacing="0.05em"
-                    >
-                      DRAFT
-                    </text>
-                  </g>
-                )
-              })()}
-              {/* Compare A/B annotation */}
-              {compareIds.has(p.id) && diffResult && (
-                <g pointerEvents="none">
-                  <circle
-                    cx={p.cx}
-                    cy={p.cy}
-                    r={r}
-                    fill="none"
-                    stroke="var(--accent-01)"
-                    strokeWidth={4}
-                  />
-                  <g transform={`translate(${p.cx}, ${p.cy + baseR + 22})`}>
-                    <rect x={-9} y={-7} width={18} height={13} rx={3} fill="var(--accent-01)" />
-                    <text
-                      textAnchor="middle"
-                      dy={2}
-                      fontSize={9}
-                      fontWeight={900}
-                      fill="white"
-                      letterSpacing="0.05em"
-                    >
-                      {p.id === diffResult.fromNode.node.id ? 'A' : 'B'}
-                    </text>
-                  </g>
-                </g>
-              )}
             </g>
           )
         })}
-
-        {/* Suppress unused-variable warnings for hiddenAnchor (kept for line continuity) */}
-        {hiddenAnchor === null ? null : null}
       </svg>
 
       <DiffControls />
-      <VersionDiffCard />
+      {diffResult && <VersionDiffCard diff={diffResult} />}
 
       {/* HTML tooltip overlay */}
       {activePoint && (
