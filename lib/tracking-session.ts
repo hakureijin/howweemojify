@@ -1,7 +1,7 @@
 import { isExperiment } from './experiment'
 import { withBasePath } from './base-path'
 import {
-  createDwell, createHoverTimer, createQueue, isSectionActive, makeId, setActiveTracker,
+  createDwell, createHoverTimer, createQueue, isSectionInView, makeId, setActiveTracker,
   FLUSH_MS, HEARTBEAT_MS, SCROLL_THROTTLE_MS,
   type Condition, type Transport,
 } from './tracking'
@@ -66,20 +66,28 @@ export function initTracking({ condition, locale }: { condition: Condition; loca
     if (a) queue.push('link', { href: a.getAttribute('href') })
   }
 
-  const io = new IntersectionObserver(
-    entries => {
-      for (const entry of entries) {
-        const id = (entry.target as HTMLElement).dataset.trackSection
-        if (!id) continue
-        const activeNow =
-          entry.isIntersecting && isSectionActive(entry.intersectionRatio, entry.intersectionRect.height, window.innerHeight)
-        const ms = dwell.setInView(id, activeNow)
-        if (!activeNow && ms > 0) queue.push('section_dwell', { section: id, ms })
-      }
-    },
-    { threshold: [0, 0.25, 0.5, 0.75, 1] },
-  )
-  document.querySelectorAll('[data-track-section]').forEach(el => io.observe(el))
+  // Section activity is recomputed from geometry on every scroll frame and resize, so
+  // dwell stays accurate however tall a section is (independent of the scroll-event throttle).
+  const evaluateSections = () => {
+    const vh = window.innerHeight
+    document.querySelectorAll<HTMLElement>('[data-track-section]').forEach(el => {
+      const id = el.dataset.trackSection
+      if (!id) return
+      const { top, bottom } = el.getBoundingClientRect()
+      const activeNow = isSectionInView(top, bottom, vh)
+      const ms = dwell.setInView(id, activeNow)
+      if (!activeNow && ms > 0) queue.push('section_dwell', { section: id, ms })
+    })
+  }
+  let frame = 0
+  const onScrollFrame = () => {
+    if (frame) return
+    frame = window.requestAnimationFrame(() => {
+      frame = 0
+      evaluateSections()
+    })
+  }
+  evaluateSections()
 
   const flushTimer = window.setInterval(() => void queue.flush(), FLUSH_MS)
   const heartbeatTimer = window.setInterval(
@@ -87,12 +95,16 @@ export function initTracking({ condition, locale }: { condition: Condition; loca
     HEARTBEAT_MS,
   )
   window.addEventListener('scroll', onScroll, { passive: true })
+  window.addEventListener('scroll', onScrollFrame, { passive: true })
+  window.addEventListener('resize', evaluateSections)
   document.addEventListener('visibilitychange', onVisibility)
   window.addEventListener('pagehide', onPageHide)
   document.addEventListener('click', onClick, true)
 
   return () => {
-    io.disconnect()
+    if (frame) window.cancelAnimationFrame(frame)
+    window.removeEventListener('scroll', onScrollFrame)
+    window.removeEventListener('resize', evaluateSections)
     window.clearInterval(flushTimer)
     window.clearInterval(heartbeatTimer)
     window.removeEventListener('scroll', onScroll)

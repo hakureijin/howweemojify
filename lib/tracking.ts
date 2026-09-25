@@ -163,6 +163,18 @@ export function isSectionActive(ratio: number, rectHeight: number, viewportHeigh
   return ratio >= 0.5 || rectHeight >= viewportHeight * 0.5
 }
 
+/** `isSectionActive` from a section's viewport-relative rect (getBoundingClientRect).
+ *  Computed from geometry rather than IntersectionObserver thresholds, which are
+ *  fractions of the section's own height and so never fire for sections more than a
+ *  few viewports tall. */
+export function isSectionInView(top: number, bottom: number, viewportHeight: number): boolean {
+  const height = bottom - top
+  if (height <= 0) return false
+  const visible = Math.max(0, Math.min(bottom, viewportHeight) - Math.max(top, 0))
+  if (visible === 0) return false
+  return isSectionActive(visible / height, visible, viewportHeight)
+}
+
 export function createHoverTimer(now: () => number) {
   const starts = new Map<string, number>()
   return {

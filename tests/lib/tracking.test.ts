@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import {
-  createQueue, createDwell, createHoverTimer, isSectionActive, makeId,
+  createQueue, createDwell, createHoverTimer, isSectionActive, isSectionInView, makeId,
   setActiveTracker, track, hoverStart, hoverEnd,
   FLUSH_THRESHOLD, MAX_BATCH, MAX_BATCH_BYTES, MAX_QUEUE, type Transport,
 } from '@/lib/tracking'
@@ -171,6 +171,22 @@ describe('isSectionActive', () => {
   it('accepts half the section visible', () => expect(isSectionActive(0.5, 100, 900)).toBe(true))
   it('accepts a tall section filling half the viewport', () => expect(isSectionActive(0.2, 450, 900)).toBe(true))
   it('rejects a sliver', () => expect(isSectionActive(0.1, 90, 900)).toBe(false))
+})
+
+describe('isSectionInView', () => {
+  // Rects are viewport-relative (getBoundingClientRect): top/bottom in px, viewport 0..vh.
+  it('accepts a 3,400 px section that fills the whole 650 px viewport', () =>
+    expect(isSectionInView(-1200, 2200, 650)).toBe(true))
+  it('rejects a tall section showing only 100 px at the bottom edge', () =>
+    expect(isSectionInView(550, 3950, 650)).toBe(false))
+  it('accepts a short 200 px section fully visible', () => expect(isSectionInView(100, 300, 650)).toBe(true))
+  it('accepts a short section more than half visible at the top edge', () =>
+    expect(isSectionInView(-90, 110, 650)).toBe(true))
+  it('rejects a section entirely off screen', () => {
+    expect(isSectionInView(700, 900, 650)).toBe(false)
+    expect(isSectionInView(-900, -700, 650)).toBe(false)
+  })
+  it('rejects a zero-height section', () => expect(isSectionInView(100, 100, 650)).toBe(false))
 })
 
 describe('hover timer and singleton', () => {
