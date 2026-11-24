@@ -49,7 +49,7 @@ Then open `http://localhost:7777/` — you'll be redirected to `/zh`. Use the la
 
 ## Static control page & user-study logging
 
-`/zh/static/` and `/en/static/` present the same information as the main page with no interaction and no motion — tooltips become labels and tables, the treemap slider becomes small multiples, the map's zoom becomes regional close-ups. The two versions do not link to each other. It is published on GitHub Pages alongside the main page.
+`/zh/static/` and `/en/static/` present the same information as the main page without the interactive charts or maps. The static page keeps the version comparison card and detailed tables for versions, categories, variant nodes and flows, and all cultural origins. The top navigation switches between interactive and static pages while keeping the current language and query string. It is published on GitHub Pages alongside the main page.
 
 For the user study, build and serve the experiment variant (language switch hidden, behaviour logging on):
 
@@ -72,7 +72,7 @@ Analysis notes:
 - `maxDepthPct` is not comparable across conditions: the static page is longer, so the same reading covers a smaller share of it. Compare per-section dwell (`section_dwell`, and the `dwell` map on `heartbeat`/`session_end`) instead. A section counts as read while half of it, or half the viewport, is covered by it.
 - `interact` pin semantics: `pin` opens a tooltip, `unpin` is a second click on the same item, `close` is any other dismissal of an open tooltip (Escape, click outside, the ✕ button, or a control change that resets the chart).
 - A session restored from the browser's back/forward cache starts again with `session_start` carrying `resumed: true` (same `sessionId`, after the earlier `session_end`).
-- The interactive page hides its hint lines below the `md` breakpoint, while the static page's legend notes are always visible.
+- The interactive page hides its hint lines below the `md` breakpoint; the static page presents details in horizontally scrollable tables on narrow screens.
 
 Do not run `npm run build:experiment` while `npm run dev` is running — they share `.next/`.
 

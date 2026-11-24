@@ -1,7 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
-import { waitFor } from '@testing-library/react'
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { describe, it, expect } from 'vitest'
 import { renderIntl, assertNoInteractive, stubResizeObserver } from '../helpers/intl'
 import { StaticStory } from '@/components/static/StaticStory'
 import ch01 from '@/data/chapter-01.json'
@@ -11,16 +8,9 @@ import ch02 from '@/data/chapter-02.json'
 import type { Chapter01Data, Chapter01CategoryData, Chapter01VariantData } from '@/types/chapter-01'
 import type { Chapter02Data } from '@/types/chapter-02'
 
-const atlas = readFileSync(resolve(__dirname, '../../public/world-atlas/countries-110m.json'), 'utf8')
-
-beforeAll(() => {
-  stubResizeObserver()
-  vi.stubGlobal('fetch', vi.fn(async () => new Response(atlas, { status: 200 })))
-})
-afterAll(() => vi.unstubAllGlobals())
-
 describe.each(['zh', 'en'] as const)('static page (%s)', locale => {
-  it('renders every chapter, all sections, and nothing operable', async () => {
+  it('renders every chapter, all sections, and nothing operable', () => {
+    stubResizeObserver()
     const { container } = renderIntl(
       <StaticStory
         ch01={ch01 as Chapter01Data}
@@ -30,7 +20,7 @@ describe.each(['zh', 'en'] as const)('static page (%s)', locale => {
       />,
       locale,
     )
-    await waitFor(() => expect(container.querySelector('svg[data-map="main"]')).not.toBeNull())
+    expect(container.querySelector('svg')).toBeNull()
     expect(container.querySelector('#ch01')).not.toBeNull()
     expect(container.querySelector('#ch02')).not.toBeNull()
     const sections = [...container.querySelectorAll('[data-track-section]')].map(el => el.getAttribute('data-track-section'))

@@ -8,10 +8,10 @@ import type { Chapter01CategoryData } from '@/types/chapter-01'
 const data = cat as Chapter01CategoryData
 
 describe('<StaticTreemap>', () => {
-  it('shows the latest frame large plus one small treemap per version', () => {
+  it('omits the main and per-version treemaps', () => {
     const { container } = renderIntl(<StaticTreemap data={data} />)
-    expect(container.querySelectorAll('figure[data-frame]')).toHaveLength(data.frames.length)
-    expect(container.querySelectorAll('[data-tile]')).toHaveLength(9 * (data.frames.length + 1))
+    expect(container.querySelector('svg')).toBeNull()
+    expect(container.querySelector('[data-frame]')).toBeNull()
   })
 
   it('tabulates count and share for every group × version', () => {

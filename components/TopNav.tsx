@@ -13,6 +13,7 @@ export function TopNav() {
 
   const otherLocale: 'zh' | 'en' = locale === 'zh' ? 'en' : 'zh'
   const switchLabel = locale === 'zh' ? 'EN' : '中'
+  const isStaticPage = pathname.replace(/\/$/, '') === '/static'
 
   return (
     <nav className="fixed top-4 right-4 z-50 flex items-center gap-1 rounded-full bg-white/70 backdrop-blur-xl backdrop-saturate-150 px-2 py-1.5 shadow-[0_2px_16px_rgba(0,0,0,0.08)] border border-black/[0.06]">
@@ -25,6 +26,14 @@ export function TopNav() {
           {t(ch)}
         </a>
       ))}
+      <button
+        type="button"
+        onClick={() => router.push(`${isStaticPage ? '/' : '/static'}${window.location.search}`)}
+        className="text-[13px] font-medium text-[color:var(--ink)] hover:bg-black/[0.06] px-3 py-1.5 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]/40 whitespace-nowrap"
+        aria-label={isStaticPage ? t('switchToDynamicAria') : t('switchToStaticAria')}
+      >
+        {isStaticPage ? t('dynamic') : t('static')}
+      </button>
       {/* Participants stay in the language their link assigns them. */}
       {!isExperiment() && (
         <button

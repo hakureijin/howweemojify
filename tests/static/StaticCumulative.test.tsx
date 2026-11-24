@@ -10,11 +10,10 @@ const data = ch01 as Chapter01Data
 const series = buildSeries(data.timeline)
 
 describe('<StaticCumulative>', () => {
-  it('draws every version on the full chart and 2015+ on the zoomed chart', () => {
+  it('omits the full and zoomed charts', () => {
     const { container } = renderIntl(<StaticCumulative data={data} />)
-    expect(container.querySelectorAll('[data-cum-chart="full"] [data-marker]')).toHaveLength(15)
-    expect(container.querySelectorAll('[data-cum-chart="since-2015"] [data-marker]'))
-      .toHaveLength(series.filter(d => d.node.year >= 2015).length)
+    expect(container.querySelector('[data-cum-chart]')).toBeNull()
+    expect(container.querySelector('svg')).toBeNull()
   })
 
   it('tabulates every tooltip field for every version', () => {
@@ -34,13 +33,10 @@ describe('<StaticCumulative>', () => {
     })
   })
 
-  it('shows the default diff card with A/B marks', () => {
-    const { container } = renderIntl(<StaticCumulative data={data} />)
+  it('shows the default version comparison card', () => {
+    renderIntl(<StaticCumulative data={data} />)
     const diff = computeVersionDiff(series, DEFAULT_FROM_ID, DEFAULT_TO_ID)!
     expect(screen.getByText(`+${diff.addedTotal.toLocaleString('zh')}`)).toBeInTheDocument()
-    const full = container.querySelector('[data-cum-chart="full"]')!
-    expect(full.querySelector(`[data-marker="${DEFAULT_FROM_ID}"]`)!.textContent).toContain('A')
-    expect(full.querySelector(`[data-marker="${DEFAULT_TO_ID}"]`)!.textContent).toContain('B')
   })
 
   it('has nothing to operate', () => {

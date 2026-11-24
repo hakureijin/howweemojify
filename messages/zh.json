@@ -2,7 +2,11 @@
   "nav": {
     "ch01": "01",
     "ch02": "02",
-    "switchLangAria": "切换到英文"
+    "switchLangAria": "切换到英文",
+    "dynamic": "动态版",
+    "static": "静态版",
+    "switchToDynamicAria": "切换到动态版",
+    "switchToStaticAria": "切换到静态版"
   },
   "hero": {
     "eyebrow": "A DATA STORY",

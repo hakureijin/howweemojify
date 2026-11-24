@@ -3,9 +3,8 @@ import { useMemo } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Citation } from '@/components/ui/Citation'
 import { ChartHeader } from '@/components/chapter-01/ChartHeader'
-import { SankeyNodeVisual } from '@/components/chapter-01/SankeyNodeVisual'
 import { StaticTable, TH, TD } from './StaticTable'
-import { buildSankey, beadGlyphs, beadSize, sankeyPath, SANKEY_W as W, SANKEY_H as H, SANKEY_PAD as PAD } from '@/lib/charts/sankey'
+import { buildSankey } from '@/lib/charts/sankey'
 import type { Chapter01VariantData } from '@/types/chapter-01'
 
 export function StaticSankey({ data }: { data: Chapter01VariantData }) {
@@ -31,32 +30,6 @@ export function StaticSankey({ data }: { data: Chapter01VariantData }) {
         total={total.toLocaleString(locale)}
         totalLabel={data.snapshot.versionLabel}
       />
-
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full select-none" role="img"
-        aria-label={t('ariaLabel', { total, version: data.snapshot.versionLabel })}>
-        <g>
-          {layout.links.map(l => (
-            <g key={`${l.mechanism}::${l.group}`} data-flow={`${l.mechanism}::${l.group}`}>
-              <path d={sankeyPath(l)} fill="none" stroke={`var(--mech-${l.mechanism})`} strokeWidth={Math.max(l.width, 0.5)} opacity={0.42} />
-              {beadGlyphs(l, data).map((b, j) => (
-                <text key={j} data-bead x={b.x} y={b.y} textAnchor="middle" dominantBaseline="central"
-                  fontSize={beadSize(l.width)} aria-hidden="true" style={{ fontVariantEmoji: 'emoji' }}>
-                  {b.glyph}
-                </text>
-              ))}
-            </g>
-          ))}
-        </g>
-        <g>
-          {layout.nodes.map(n => (
-            <g key={n.id}>
-              <SankeyNodeVisual n={n} locale={locale} rectOpacity={0.92} labelOpacity={1} active={false} />
-            </g>
-          ))}
-        </g>
-        <text x={PAD.left} y={12} fontSize="9" fontWeight="800" letterSpacing="0.15em" fill="var(--muted)">{t('columnLeft')}</text>
-        <text x={W - PAD.right} y={12} textAnchor="end" fontSize="9" fontWeight="800" letterSpacing="0.15em" fill="var(--muted)">{t('columnRight')}</text>
-      </svg>
 
       <StaticTable caption={st('nodeTableCaption')}>
         <thead>

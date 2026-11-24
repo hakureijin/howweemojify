@@ -3,55 +3,8 @@ import { useLocale, useTranslations } from 'next-intl'
 import { Citation } from '@/components/ui/Citation'
 import { ChartHeader } from '@/components/chapter-01/ChartHeader'
 import { StaticTable, TH, TD } from './StaticTable'
-import { layoutTreemap, sampleRuns, tileTextLayout, TREEMAP_W, TREEMAP_H } from '@/lib/charts/treemap'
-import type { CategoryFrame, CategoryGroupKey, Chapter01CategoryData } from '@/types/chapter-01'
-
-const SMALL_W = 280
-const SMALL_H = 146
-
-function TreemapSvg({ frame, groupOrder, w, h }: { frame: CategoryFrame; groupOrder: CategoryGroupKey[]; w: number; h: number }) {
-  const t = useTranslations('ch01.categoryTreemap')
-  const locale = useLocale()
-  const tiles = layoutTreemap(frame, groupOrder, w, h)
-  const rx = Math.max(4, Math.round(12 * (w / TREEMAP_W)))
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="w-full select-none" role="img"
-      aria-label={t('ariaLabel', { year: frame.year, version: frame.versionLabel, total: frame.total })}>
-      {tiles.map(tile => {
-        const label = t(`groups.${tile.key}` as never)
-        const L = tileTextLayout(tile, label)
-        const percent = (tile.count / frame.total) * 100
-        const glyph = frame.samples[tile.key]?.[0] ?? ''
-        return (
-          <g key={tile.key} data-tile={tile.key}>
-            <rect x={tile.x} y={tile.y} width={tile.w} height={tile.h} fill={`var(--cat-${tile.key})`} opacity={0.9} rx={rx} />
-            {glyph && (
-              <text x={tile.x + tile.w / 2} y={L.stageCy} textAnchor="middle" dominantBaseline="central"
-                fontSize={L.emojiSize} aria-hidden="true" style={{ fontVariantEmoji: 'emoji' }}>
-                {glyph}
-              </text>
-            )}
-            {L.hasText && (
-              <>
-                <rect x={tile.x} y={tile.y + tile.h - L.textBandH} width={tile.w} height={L.textBandH} fill="black" opacity={0.08} />
-                {L.canShowLabel && (
-                  <text x={L.labelX} y={L.labelY} textAnchor={L.labelAnchor} fontSize="10" fontWeight="800"
-                    letterSpacing="0.06em" fill="#1a1a1a" style={{ textTransform: 'uppercase' }}>
-                    {label}
-                  </text>
-                )}
-                <text x={L.countX} y={L.countY} textAnchor={L.countAnchor} fontSize="12" fontWeight="900" className="tabular" fill="#1a1a1a">
-                  {tile.count.toLocaleString(locale)}
-                  <tspan className="font-bold" fill="#3a3a3a" dx="6" fontSize="10">{percent.toFixed(1)}%</tspan>
-                </text>
-              </>
-            )}
-          </g>
-        )
-      })}
-    </svg>
-  )
-}
+import { sampleRuns } from '@/lib/charts/treemap'
+import type { Chapter01CategoryData } from '@/types/chapter-01'
 
 export function StaticTreemap({ data }: { data: Chapter01CategoryData }) {
   const t = useTranslations('ch01.categoryTreemap')
@@ -69,22 +22,6 @@ export function StaticTreemap({ data }: { data: Chapter01CategoryData }) {
         total={latest.total.toLocaleString(locale)}
         totalLabel={t('totalBy', { version: latest.versionLabel })}
       />
-
-      <TreemapSvg frame={latest} groupOrder={data.groupOrder} w={TREEMAP_W} h={TREEMAP_H} />
-
-      <div className="mt-8">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[color:var(--muted)]">{st('smallMultiplesTitle')}</div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3">
-          {frames.map(f => (
-            <figure key={f.versionId} data-frame={f.versionId}>
-              <TreemapSvg frame={f} groupOrder={data.groupOrder} w={SMALL_W} h={SMALL_H} />
-              <figcaption className="mt-1 text-[10px] font-bold tabular text-[color:var(--muted)]">
-                {f.versionLabel} · {f.year} · {f.total.toLocaleString(locale)}
-              </figcaption>
-            </figure>
-          ))}
-        </div>
-      </div>
 
       <StaticTable caption={st('tableCaption')}>
         <thead>

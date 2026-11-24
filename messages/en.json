@@ -2,7 +2,11 @@
   "nav": {
     "ch01": "01",
     "ch02": "02",
-    "switchLangAria": "Switch to Chinese"
+    "switchLangAria": "Switch to Chinese",
+    "dynamic": "Interactive",
+    "static": "Static",
+    "switchToDynamicAria": "Switch to interactive version",
+    "switchToStaticAria": "Switch to static version"
   },
   "hero": {
     "eyebrow": "A DATA STORY",

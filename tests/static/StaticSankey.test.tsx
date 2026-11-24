@@ -1,18 +1,15 @@
 import { describe, it, expect } from 'vitest'
 import { renderIntl, assertNoInteractive } from '../helpers/intl'
 import { StaticSankey } from '@/components/static/StaticSankey'
-import { beadCount } from '@/lib/charts/sankey'
 import v from '@/data/chapter-01-variants.json'
 import type { Chapter01VariantData } from '@/types/chapter-01'
 
 const data = v as Chapter01VariantData
 
 describe('<StaticSankey>', () => {
-  it('draws every flow with its beads showing', () => {
+  it('omits the flow chart', () => {
     const { container } = renderIntl(<StaticSankey data={data} />)
-    expect(container.querySelectorAll('[data-flow]')).toHaveLength(22)
-    const expectedBeads = data.flows.filter(f => f.examples.length > 0).reduce((a, f) => a + beadCount(f.count), 0)
-    expect(container.querySelectorAll('[data-bead]')).toHaveLength(expectedBeads)
+    expect(container.querySelector('svg')).toBeNull()
   })
 
   it('tabulates every node and flow tooltip', () => {
